@@ -31,7 +31,8 @@ Hard lockdown makes CatnipKiosk the device owner. It needs a device with **no ac
    ```
 
 3. Reopen CatnipKiosk. It locks itself in.
-4. Turn USB debugging off again. Left on, anyone with a cable and a computer could take the device out of the kiosk.
+
+While hard lockdown is on, CatnipKiosk turns USB debugging off, so nobody can use a cable and a computer to leave the kiosk. Removing hard lockdown allows it again.
 
 To undo it, open settings with the secret gesture and your PIN, then choose **Remove hard lockdown**. After that the app can be uninstalled normally.
 

@@ -335,7 +335,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         // Re-applied on every return to the front, so an admin's exit never leaves the device unlocked.
-        HardLockdown(DpmOps(this)).apply()
+        HardLockdown(DpmOps(this), blockDebugging = !BuildConfig.DEBUG).apply()
         lockdownRefresh++
     }
 

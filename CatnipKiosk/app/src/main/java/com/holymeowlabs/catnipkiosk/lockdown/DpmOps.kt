@@ -53,6 +53,14 @@ class DpmOps(private val activity: Activity) : DeviceOwnerOps {
         }
     }
 
+    override fun setDebuggingDisallowed(disallowed: Boolean) {
+        if (disallowed) {
+            dpm.addUserRestriction(admin, UserManager.DISALLOW_DEBUGGING_FEATURES)
+        } else {
+            dpm.clearUserRestriction(admin, UserManager.DISALLOW_DEBUGGING_FEATURES)
+        }
+    }
+
     override fun startLockTask() {
         val am = activity.getSystemService(ActivityManager::class.java)
         if (am.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE) activity.startLockTask()

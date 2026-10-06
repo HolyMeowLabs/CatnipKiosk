@@ -9,6 +9,7 @@ interface DeviceOwnerOps {
     fun setHomePreferred(preferred: Boolean)
     fun setStayOnWhilePluggedIn(on: Boolean)
     fun setSafeBootDisallowed(disallowed: Boolean)
+    fun setDebuggingDisallowed(disallowed: Boolean)
     fun startLockTask()
     fun stopLockTask()
     fun clearDeviceOwner()
@@ -18,7 +19,7 @@ interface DeviceOwnerOps {
  * Spec §8 hard lockdown. Factory reset is deliberately left allowed: it is the recovery path
  * for a forgotten PIN.
  */
-class HardLockdown(private val ops: DeviceOwnerOps) {
+class HardLockdown(private val ops: DeviceOwnerOps, private val blockDebugging: Boolean = true) {
 
     /** Idempotent; does nothing unless the app is device owner. */
     fun apply() {
@@ -28,6 +29,9 @@ class HardLockdown(private val ops: DeviceOwnerOps) {
         ops.setHomePreferred(true)
         ops.setStayOnWhilePluggedIn(true)
         ops.setSafeBootDisallowed(true)
+        // USB debugging would let anyone with a cable and adb leave the kiosk. Debug builds keep it,
+        // because blocking it also cuts the adb connection their tests run over.
+        if (blockDebugging) ops.setDebuggingDisallowed(true)
         ops.startLockTask()
     }
 
@@ -36,6 +40,7 @@ class HardLockdown(private val ops: DeviceOwnerOps) {
         ops.stopLockTask()
         ops.setHomePreferred(false)
         ops.setSafeBootDisallowed(false)
+        ops.setDebuggingDisallowed(false)
         ops.setStayOnWhilePluggedIn(false)
         ops.setLockTaskPackages(emptyList())
         ops.clearDeviceOwner()

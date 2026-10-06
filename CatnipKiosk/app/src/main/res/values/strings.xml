@@ -72,7 +72,7 @@
     <string name="hard_prereq_usb">• Turn on Developer options and USB debugging, and connect the device to a computer with adb.</string>
     <string name="hard_run_title">Run this on the computer</string>
     <string name="hard_after">Then reopen CatnipKiosk. It locks itself in, and you can remove hard lockdown later from Settings.</string>
-    <string name="hard_usb_off">Then turn USB debugging off again (Settings › System › Developer options). Left on, anyone with a cable and a computer could take the device out of the kiosk.</string>
+    <string name="hard_usb_off">While hard lockdown is on, CatnipKiosk turns USB debugging off so nobody can use a cable and a computer to leave the kiosk. Removing hard lockdown allows it again.</string>
     <string name="hard_warning">If you forget the PIN, the only way out of hard lockdown is a factory reset, which erases the device.</string>
     <string name="settings_is_home">CatnipKiosk is the Home app. Pressing Home returns here, and the device starts into the kiosk.</string>
     <string name="settings_not_home_limitation">While CatnipKiosk isn\'t the Home app, pressing Home leaves the kiosk, and Android won\'t let it bring itself back or start by itself after a restart.</string>

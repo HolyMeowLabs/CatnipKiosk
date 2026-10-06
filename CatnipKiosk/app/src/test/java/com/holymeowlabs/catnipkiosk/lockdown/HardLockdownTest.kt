@@ -14,6 +14,7 @@ class HardLockdownTest {
         var safeBoot = false
         var lockTaskRunning = false
         var featuresNone = false
+        var debugBlocked = false
 
         override val packageName = "com.holymeowlabs.catnipkiosk"
         override fun isDeviceOwner() = deviceOwner
@@ -24,6 +25,7 @@ class HardLockdownTest {
         override fun setSafeBootDisallowed(disallowed: Boolean) { calls += "safeBoot=$disallowed"; safeBoot = disallowed }
         override fun startLockTask() { calls += "start"; check(packageName in allowlist) { "not allowlisted" }; lockTaskRunning = true }
         override fun stopLockTask() { calls += "stop"; lockTaskRunning = false }
+        override fun setDebuggingDisallowed(disallowed: Boolean) { calls += "debug=$disallowed"; debugBlocked = disallowed }
         override fun clearDeviceOwner() { calls += "clearOwner"; deviceOwner = false }
     }
 
@@ -36,8 +38,17 @@ class HardLockdownTest {
         assertThat(ops.home).isTrue()
         assertThat(ops.stayOn).isTrue()
         assertThat(ops.safeBoot).isTrue()
+        assertThat(ops.debugBlocked).isTrue()
         assertThat(ops.lockTaskRunning).isTrue()
         assertThat(ops.calls.last()).isEqualTo("start")
+    }
+
+    @Test
+    fun debugBuildsKeepUsbDebuggingSoTheyCanBeTestedOverAdb() {
+        val ops = FakeOps()
+        HardLockdown(ops, blockDebugging = false).apply()
+        assertThat(ops.debugBlocked).isFalse()
+        assertThat(ops.lockTaskRunning).isTrue()
     }
 
     @Test
@@ -58,6 +69,7 @@ class HardLockdownTest {
         assertThat(ops.home).isFalse()
         assertThat(ops.stayOn).isFalse()
         assertThat(ops.safeBoot).isFalse()
+        assertThat(ops.debugBlocked).isFalse()
         assertThat(ops.deviceOwner).isFalse()
         assertThat(ops.calls.first()).isEqualTo("stop")
         assertThat(ops.calls.last()).isEqualTo("clearOwner")

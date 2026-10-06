@@ -23,6 +23,9 @@ class PinViewModelTest {
 
     private inner class Harness(scope: TestScope, pin: String, lockout: Boolean = true) {
         val initial = hasher.create(pin)
+        /** Simulated wall-clock adjustment on top of virtual time. */
+        var clockOffsetMs = 0L
+        private val wallClock = { scope.currentTime + clockOffsetMs }
         val saves = mutableListOf<SecurityState>()
         val unlocks = mutableListOf<Unit>()
         val cancels = mutableListOf<Unit>()
@@ -30,10 +33,10 @@ class PinViewModelTest {
         val vm = PinViewModel(
             initial = initial,
             lockoutEnabled = lockout,
-            gate = PinGate(hasher) { scope.currentTime },
+            gate = PinGate(hasher) { wallClock() },
             save = { saves += it },
             scope = scope.backgroundScope,
-            nowMs = { scope.currentTime },
+            nowMs = { wallClock() },
             work = dispatcher,
         )
 
@@ -101,6 +104,28 @@ class PinViewModelTest {
         h.type("12")
         assertThat(h.vm.state.value.digits).isEqualTo(0)
         advanceTimeBy(60_001)
+        h.type("1234"); h.vm.ok(); runCurrent()
+        assertThat(h.unlocks).hasSize(1)
+    }
+
+    @Test
+    fun clockSetBackDuringALockoutNeverLocksForMoreThanAMinute() = runTest {
+        val h = Harness(this, "1234")
+        repeat(5) { h.type("9999"); h.vm.ok(); runCurrent() }
+        h.clockOffsetMs = -3_600_000 // wall clock moved back an hour
+        h.type("1")
+        assertThat(h.vm.state.value.digits).isEqualTo(0)
+        assertThat(h.vm.state.value.lockedUntilMs!! - (currentTime + h.clockOffsetMs)).isAtMost(60_000)
+        advanceTimeBy(60_001)
+        h.type("1234"); h.vm.ok(); runCurrent()
+        assertThat(h.unlocks).hasSize(1)
+    }
+
+    @Test
+    fun clockMovedForwardEndsALockout() = runTest {
+        val h = Harness(this, "1234")
+        repeat(5) { h.type("9999"); h.vm.ok(); runCurrent() }
+        h.clockOffsetMs = 3_600_000
         h.type("1234"); h.vm.ok(); runCurrent()
         assertThat(h.unlocks).hasSize(1)
     }

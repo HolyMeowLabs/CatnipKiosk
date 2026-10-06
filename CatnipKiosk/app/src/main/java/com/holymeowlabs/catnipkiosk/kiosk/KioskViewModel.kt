@@ -1,8 +1,10 @@
 package com.holymeowlabs.catnipkiosk.kiosk
 
+import com.holymeowlabs.catnipkiosk.policy.NavigationPolicy
 import com.holymeowlabs.catnipkiosk.reload.ReloadPolicy
 import com.holymeowlabs.catnipkiosk.settings.KioskSettings
 import com.holymeowlabs.catnipkiosk.web.WebEvent
+import java.net.URI
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -16,7 +18,8 @@ import kotlinx.coroutines.launch
 sealed interface KioskUi {
     data object Showing : KioskUi
     data class Reconnecting(val attempt: Int, val retryAtMs: Long) : KioskUi
-    data class SetupProblem(val blockedHost: String) : KioskUi
+    /** [sameSite]: the start page leads elsewhere on its own host (only possible in page-only mode). */
+    data class SetupProblem(val blockedHost: String, val sameSite: Boolean = false) : KioskUi
 }
 
 /** Decides what the kiosk shows over the page and when the page is reloaded. */
@@ -49,7 +52,8 @@ class KioskViewModel(
             is WebEvent.Blocked -> if (settings.showBlockedMessage) _toast.tryEmit(Unit)
             is WebEvent.StartPageBlocked -> {
                 retry?.cancel()
-                _ui.value = KioskUi.SetupProblem(e.blockedHost)
+                val startHost = NavigationPolicy.normalizeHost(runCatching { URI(settings.startUrl).host }.getOrNull())
+                _ui.value = KioskUi.SetupProblem(e.blockedHost, sameSite = e.blockedHost == startHost)
             }
             WebEvent.RendererGone -> _reloadRequests.tryEmit(Unit)
         }

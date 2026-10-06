@@ -32,6 +32,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.holymeowlabs.catnipkiosk.R
+import com.holymeowlabs.catnipkiosk.security.PinGate
 import kotlinx.coroutines.delay
 
 /** 3×4 keypad of real buttons (D-pad friendly); number keys type digits; Back cancels. */
@@ -102,7 +103,8 @@ private fun PinMessage(state: PinUi, nowMs: () -> Long) {
             }
         }
         if (now < until) {
-            val seconds = ((until - now + 999) / 1000).toInt()
+            // Capped at the lock length in case the wall clock was set back while showing.
+            val seconds = ((until - now + 999) / 1000).toInt().coerceAtMost((PinGate.LOCK_MS / 1000).toInt())
             Text(stringResource(R.string.pin_locked, seconds), color = MaterialTheme.colorScheme.error)
             return
         }

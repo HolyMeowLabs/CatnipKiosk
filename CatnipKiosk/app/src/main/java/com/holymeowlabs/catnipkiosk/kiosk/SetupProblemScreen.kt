@@ -16,13 +16,18 @@ import com.holymeowlabs.catnipkiosk.R
 
 /** The start page leads off the allowed hosts; names only the host for the admin. */
 @Composable
-fun SetupProblemScreen(blockedHost: String) {
+fun SetupProblemScreen(blockedHost: String, sameSite: Boolean = false) {
     Column(
         Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(48.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(stringResource(R.string.setup_problem_title), style = MaterialTheme.typography.headlineMedium)
-        Text(stringResource(R.string.setup_problem_body, blockedHost), style = MaterialTheme.typography.bodyLarge)
+        val body = if (sameSite) {
+            stringResource(R.string.setup_problem_same_site)
+        } else {
+            stringResource(R.string.setup_problem_body, blockedHost)
+        }
+        Text(body, style = MaterialTheme.typography.bodyLarge)
     }
 }

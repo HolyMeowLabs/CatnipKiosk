@@ -67,6 +67,13 @@ class KioskScreenTest {
     }
 
     @Test
+    fun sameSiteSetupProblemGivesAdviceThatCanWork() {
+        show(KioskUi.SetupProblem("example.com", sameSite = true))
+        compose.onAllNodes(hasText("The whole site", substring = true)).assertCountEquals(1)
+        compose.onAllNodes(hasText("isn't allowed. Add it", substring = true)).assertCountEquals(0)
+    }
+
+    @Test
     fun showingHasNoOverlay() {
         show(KioskUi.Showing)
         compose.onAllNodesWithText("Reconnecting…").assertCountEquals(0)

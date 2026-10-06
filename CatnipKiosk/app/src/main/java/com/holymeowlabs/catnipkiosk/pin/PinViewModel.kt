@@ -93,7 +93,22 @@ class PinViewModel(
         _cancelled.tryEmit(Unit)
     }
 
-    private fun isLocked() = _state.value.lockedUntilMs?.let { it > nowMs() } == true
+    /** Like PinGate, clamps to at most a minute from now, so a wall clock set back can't extend the lock. */
+    private fun isLocked(): Boolean {
+        val until = _state.value.lockedUntilMs ?: return false
+        val now = nowMs()
+        val clamped = minOf(until, now + PinGate.LOCK_MS)
+        if (clamped != until) {
+            _state.value = _state.value.copy(lockedUntilMs = clamped)
+            // Clamp the stored lock too, or the next attempt would be refused for another minute.
+            if (security.lockedUntilEpochMs > clamped) {
+                security = security.copy(lockedUntilEpochMs = clamped)
+                val toSave = security
+                scope.launch { save(toSave) }
+            }
+        }
+        return clamped > now
+    }
 
     private fun submit() {
         busy = true

@@ -2,6 +2,7 @@ package com.holymeowlabs.catnipkiosk.kiosk
 
 import com.google.common.truth.Truth.assertThat
 import com.holymeowlabs.catnipkiosk.settings.KioskSettings
+import com.holymeowlabs.catnipkiosk.settings.NavMode
 import com.holymeowlabs.catnipkiosk.settings.ScheduledReload
 import com.holymeowlabs.catnipkiosk.web.WebEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -110,6 +111,16 @@ class KioskViewModelTest {
         assertThat(h.vm.ui.value).isEqualTo(KioskUi.SetupProblem("login.example.net"))
         advanceTimeBy(120_000)
         assertThat(h.reloads).isEmpty()
+    }
+
+    @Test
+    fun startPageRedirectWithinTheSameSiteIsFlaggedSoTheAdviceFits() = runTest {
+        val h = Harness(this)
+        val pageOnly = settings.copy(navMode = NavMode.PAGE_ONLY)
+        h.vm.onWebEvent(WebEvent.StartPageBlocked("example.com"), pageOnly)
+        assertThat(h.vm.ui.value).isEqualTo(KioskUi.SetupProblem("example.com", sameSite = true))
+        h.vm.onWebEvent(WebEvent.StartPageBlocked("login.example.net"), pageOnly)
+        assertThat(h.vm.ui.value).isEqualTo(KioskUi.SetupProblem("login.example.net", sameSite = false))
     }
 
     @Test

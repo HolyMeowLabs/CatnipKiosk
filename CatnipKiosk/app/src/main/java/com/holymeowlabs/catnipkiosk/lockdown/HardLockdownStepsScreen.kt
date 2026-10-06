@@ -53,6 +53,7 @@ fun HardLockdownStepsScreen(onBack: () -> Unit) {
             )
         }
         Text(stringResource(R.string.hard_after))
+        Text(stringResource(R.string.hard_usb_off), fontWeight = FontWeight.Bold)
         Text(stringResource(R.string.hard_warning), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
         Button(onClick = onBack) { Text(stringResource(R.string.setup_back)) }
     }

@@ -116,7 +116,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Becoming the Home app makes Android start a new instance in a Home task; only one kiosk may run.
-        current?.get()?.takeIf { it !== this && !it.isFinishing }?.finishAndRemoveTask()
+        // A destroyed predecessor is a recreation (configuration change), not a second instance.
+        current?.get()?.takeIf { it !== this && !it.isFinishing && !it.isDestroyed }?.finishAndRemoveTask()
         current = WeakReference(this)
         hideSystemBars()
         webView = newWebView()
@@ -356,6 +357,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        if (current?.get() === this) current = null
         webView.destroy()
         super.onDestroy()
     }

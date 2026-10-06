@@ -40,7 +40,7 @@ fun KioskScreen(
         when (ui) {
             KioskUi.Showing -> Unit
             is KioskUi.Reconnecting -> ReconnectingScreen(ui, networkAvailable, nowMs)
-            is KioskUi.SetupProblem -> SetupProblemScreen(ui.blockedHost)
+            is KioskUi.SetupProblem -> SetupProblemScreen(ui.blockedHost, ui.sameSite)
         }
         if (!coveredByAdmin) BlockedToast(toasts)
     }

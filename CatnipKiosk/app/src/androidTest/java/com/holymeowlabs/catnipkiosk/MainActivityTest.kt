@@ -94,6 +94,18 @@ class MainActivityTest {
         return result as T
     }
 
+    /** A configuration change Android handles by recreating the Activity must not close the kiosk. */
+    @Test
+    fun recreatingTheActivityKeepsTheKioskRunning() = runBlocking {
+        routes["/start"] = { html("start") }
+        configure()
+        launch()
+        awaitRequests("/start", 1)
+        scenario!!.recreate()
+        delay(1_000)
+        assertThat(scenario!!.state).isEqualTo(Lifecycle.State.RESUMED)
+    }
+
     /** Becoming the Home app makes Android start a second instance in a Home task; the old one must go. */
     @Test
     fun becomingHomeLeavesASingleKioskInstance() = runBlocking {

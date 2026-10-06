@@ -9,6 +9,7 @@
     <string name="network_offline">offline</string>
     <string name="setup_problem_title">This screen needs attention</string>
     <string name="setup_problem_body">This page sends viewers to %1$s, which isn\'t allowed. Add it under Settings › Navigation.</string>
+    <string name="setup_problem_same_site">This page sends viewers to another page on the same site, and Navigation is set to \"This page only\". Choose \"The whole site\" under Settings › Navigation, or set the start page to the address it goes to.</string>
     <string name="setup_title">Set up this screen</string>
     <string name="setup_step">Step %1$d of 3 · %2$s</string>
     <string name="setup_step_start_page">Start page</string>
@@ -71,6 +72,7 @@
     <string name="hard_prereq_usb">• Turn on Developer options and USB debugging, and connect the device to a computer with adb.</string>
     <string name="hard_run_title">Run this on the computer</string>
     <string name="hard_after">Then reopen CatnipKiosk. It locks itself in, and you can remove hard lockdown later from Settings.</string>
+    <string name="hard_usb_off">Then turn USB debugging off again (Settings › System › Developer options). Left on, anyone with a cable and a computer could take the device out of the kiosk.</string>
     <string name="hard_warning">If you forget the PIN, the only way out of hard lockdown is a factory reset, which erases the device.</string>
     <string name="settings_is_home">CatnipKiosk is the Home app. Pressing Home returns here, and the device starts into the kiosk.</string>
     <string name="settings_not_home_limitation">While CatnipKiosk isn\'t the Home app, pressing Home leaves the kiosk, and Android won\'t let it bring itself back or start by itself after a restart.</string>

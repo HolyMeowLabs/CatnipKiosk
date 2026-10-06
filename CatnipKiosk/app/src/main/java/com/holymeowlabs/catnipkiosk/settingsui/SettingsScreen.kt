@@ -18,6 +18,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -58,7 +59,11 @@ enum class SettingsSection(val title: Int) {
 }
 
 /** What Settings shows about soft lockdown; refreshed whenever the screen resumes. */
-data class StartupStatus(val isHomeApp: Boolean = false, val canRequestHome: Boolean = false)
+data class StartupStatus(
+    val isHomeApp: Boolean = false,
+    val canRequestHome: Boolean = false,
+    val isHardLockdown: Boolean = false,
+)
 
 /** TV: a focusable side rail with one section at a time. Tablet: every section in one scroll. */
 @Composable
@@ -70,10 +75,13 @@ fun SettingsScreen(
     onReloadNow: () -> Unit,
     startup: StartupStatus = StartupStatus(),
     onSetHome: () -> Unit = {},
+    onShowHardSteps: () -> Unit = {},
+    onRemoveHard: () -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
     val settings by vm.settings.collectAsState()
     var changingPin by remember { mutableStateOf(false) }
+    var confirmingRemove by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -82,7 +90,9 @@ fun SettingsScreen(
             Button(onClick = onBack, modifier = Modifier.padding(start = 12.dp)) { Text(stringResource(R.string.settings_back_to_kiosk)) }
         }
         val sectionContent: @Composable ColumnScope.(SettingsSection) -> Unit = { section ->
-            Section(section, vm, settings, onReloadNow, startup, onSetHome) { changingPin = true }
+            Section(section, vm, settings, onReloadNow, startup, onSetHome, onShowHardSteps, { confirmingRemove = true }) {
+                changingPin = true
+            }
         }
         if (isTv) {
             var selected by rememberSaveable { mutableStateOf(SettingsSection.StartPage) }
@@ -116,6 +126,18 @@ fun SettingsScreen(
         }
     }
     if (changingPin) ChangePinDialog(change = vm::changePin, onDone = { changingPin = false })
+    if (confirmingRemove) {
+        AlertDialog(
+            onDismissRequest = { confirmingRemove = false },
+            text = { Text(stringResource(R.string.settings_hard_remove_confirm)) },
+            confirmButton = {
+                TextButton(onClick = { confirmingRemove = false; onRemoveHard() }) {
+                    Text(stringResource(R.string.settings_hard_remove_yes))
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmingRemove = false }) { Text(stringResource(R.string.pin_cancel)) } },
+        )
+    }
 }
 
 @Composable
@@ -126,6 +148,8 @@ private fun ColumnScope.Section(
     onReloadNow: () -> Unit,
     startup: StartupStatus,
     onSetHome: () -> Unit,
+    onShowHardSteps: () -> Unit,
+    onRemoveHard: () -> Unit,
     onChangePin: () -> Unit,
 ) {
     when (section) {
@@ -246,9 +270,14 @@ private fun ColumnScope.Section(
                 }
                 else -> Text(stringResource(R.string.settings_home_unavailable), color = muted)
             }
-            // Hard lockdown is wired in Task 15.
-            OutlinedButton(onClick = {}, enabled = false) { Text(stringResource(R.string.settings_hard_lockdown)) }
-            Text(stringResource(R.string.settings_lockdown_pending), color = muted)
+            HorizontalDivider()
+            if (startup.isHardLockdown) {
+                Text(stringResource(R.string.settings_hard_on))
+                OutlinedButton(onClick = onRemoveHard) { Text(stringResource(R.string.settings_hard_remove)) }
+            } else {
+                Text(stringResource(R.string.settings_hard_off), color = muted)
+                OutlinedButton(onClick = onShowHardSteps) { Text(stringResource(R.string.settings_hard_show_steps)) }
+            }
         }
         SettingsSection.Security -> {
             Button(onClick = onChangePin) { Text(stringResource(R.string.settings_change_pin)) }

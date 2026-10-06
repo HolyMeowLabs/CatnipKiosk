@@ -30,6 +30,7 @@ class RouteTest {
         // Each PIN attempt saves SecurityState, which re-emits the store.
         assertThat(nextRoute(Route.Pin, settings, security)).isEqualTo(Route.Pin)
         assertThat(nextRoute(Route.Settings, settings, security)).isEqualTo(Route.Settings)
+        assertThat(nextRoute(Route.HardLockdownSteps, settings, security)).isEqualTo(Route.HardLockdownSteps)
     }
 
     @Test
@@ -47,6 +48,7 @@ class RouteTest {
     fun leavingTheAppEndsTheAdminSession() {
         assertThat(routeAfterStop(Route.Settings)).isEqualTo(Route.Kiosk)
         assertThat(routeAfterStop(Route.Pin)).isEqualTo(Route.Kiosk)
+        assertThat(routeAfterStop(Route.HardLockdownSteps)).isEqualTo(Route.Kiosk)
         assertThat(routeAfterStop(Route.Setup)).isEqualTo(Route.Setup)
         assertThat(routeAfterStop(Route.Kiosk)).isEqualTo(Route.Kiosk)
     }
@@ -57,6 +59,7 @@ class RouteTest {
         assertThat(adminSessionExpired(Route.Settings, last, last + ADMIN_IDLE_MS - 1)).isFalse()
         assertThat(adminSessionExpired(Route.Settings, last, last + ADMIN_IDLE_MS)).isTrue()
         assertThat(adminSessionExpired(Route.Pin, last, last + ADMIN_IDLE_MS)).isTrue()
+        assertThat(adminSessionExpired(Route.HardLockdownSteps, last, last + ADMIN_IDLE_MS)).isTrue()
         assertThat(adminSessionExpired(Route.Kiosk, last, last + ADMIN_IDLE_MS * 10)).isFalse()
         assertThat(adminSessionExpired(Route.Setup, last, last + ADMIN_IDLE_MS * 10)).isFalse()
     }

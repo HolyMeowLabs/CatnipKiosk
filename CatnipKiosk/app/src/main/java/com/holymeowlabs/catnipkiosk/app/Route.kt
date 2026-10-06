@@ -27,7 +27,7 @@ fun nextRoute(current: Route?, settings: KioskSettings?, security: SecurityState
 /** An unlocked admin screen left alone this long returns to the kiosk. */
 const val ADMIN_IDLE_MS = 120_000L
 
-private fun Route?.isAdmin() = this == Route.Pin || this == Route.Settings
+private fun Route?.isAdmin() = this == Route.Pin || this == Route.Settings || this == Route.HardLockdownSteps
 
 /** Leaving the app (Home, screen off, another app) ends the admin session; return needs the PIN again. */
 fun routeAfterStop(current: Route?): Route? = if (current.isAdmin()) Route.Kiosk else current

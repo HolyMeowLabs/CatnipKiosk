@@ -56,7 +56,11 @@ import com.holymeowlabs.catnipkiosk.pin.PinScreen
 import com.holymeowlabs.catnipkiosk.pin.PinViewModel
 import com.holymeowlabs.catnipkiosk.security.PinGate
 import com.holymeowlabs.catnipkiosk.security.PinHasher
+import com.holymeowlabs.catnipkiosk.lockdown.DpmOps
+import com.holymeowlabs.catnipkiosk.lockdown.HardLockdown
+import com.holymeowlabs.catnipkiosk.lockdown.HardLockdownStepsScreen
 import com.holymeowlabs.catnipkiosk.lockdown.LockdownController
+import com.holymeowlabs.catnipkiosk.lockdown.LockdownTier
 import com.holymeowlabs.catnipkiosk.settingsui.SettingsScreen
 import com.holymeowlabs.catnipkiosk.settingsui.StartupStatus
 import com.holymeowlabs.catnipkiosk.settingsui.SettingsViewModel
@@ -130,7 +134,9 @@ class MainActivity : ComponentActivity() {
                 Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                     val current = route
                     // The page stays composed under the admin screens so opening them doesn't reload it.
-                    if (current == Route.Kiosk || current == Route.Pin || current == Route.Settings) {
+                    if (current == Route.Kiosk || current == Route.Pin || current == Route.Settings ||
+                        current == Route.HardLockdownSteps
+                    ) {
                         key(webViewGeneration) {
                             KioskScreen(
                                 webView, ui, networkAvailable, vm.toast, System::currentTimeMillis,
@@ -162,14 +168,23 @@ class MainActivity : ComponentActivity() {
                                 vm = settingsVm,
                                 isTv = isTv,
                                 onBack = { route = Route.Kiosk },
-                                onExitApp = ::finishAndRemoveTask,
+                                onExitApp = ::exitApp,
                                 onReloadNow = {
                                     webView.loadStart()
                                     route = Route.Kiosk
                                 },
                                 startup = remember(lockdownRefresh) {
                                     val lockdown = LockdownController(this@MainActivity)
-                                    StartupStatus(lockdown.isHomeApp(), lockdown.homeRoleRequestIntent() != null)
+                                    StartupStatus(
+                                        isHomeApp = lockdown.isHomeApp(),
+                                        canRequestHome = lockdown.homeRoleRequestIntent() != null,
+                                        isHardLockdown = lockdown.tier() == LockdownTier.HARD,
+                                    )
+                                },
+                                onShowHardSteps = { route = Route.HardLockdownSteps },
+                                onRemoveHard = {
+                                    HardLockdown(DpmOps(this@MainActivity)).remove()
+                                    lockdownRefresh++
                                 },
                                 onSetHome = {
                                     LockdownController(this@MainActivity).homeRoleRequestIntent()?.let(homeRoleRequest::launch)
@@ -177,6 +192,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         // Finishing saves settings and security; the store update then routes to the kiosk.
+                        Route.HardLockdownSteps -> HardLockdownStepsScreen(onBack = { route = Route.Settings })
                         Route.Setup -> {
                             val setupVm = remember { newSetupViewModel() }
                             val state by setupVm.state.collectAsState()
@@ -308,7 +324,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (!hardLockdownSuspended) HardLockdown(DpmOps(this)).apply()
         lockdownRefresh++
+    }
+
+    /** In hard lockdown, leaves lock task for the rest of this process's life before closing. */
+    private fun exitApp() {
+        if (LockdownController(this).tier() == LockdownTier.HARD) {
+            HardLockdown(DpmOps(this)).suspendForSession()
+            hardLockdownSuspended = true
+        }
+        finishAndRemoveTask()
     }
 
     override fun onPause() {
@@ -367,6 +393,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private companion object {
+        /** Process-wide: Exit app suspends hard lockdown until the process restarts (e.g. reboot). */
+        var hardLockdownSuspended = false
+
         /** Side of the top-left square for the tablet's 5-tap secret entry. */
         const val SECRET_CORNER_DP = 80f
         const val ADMIN_IDLE_CHECK_MS = 5_000L

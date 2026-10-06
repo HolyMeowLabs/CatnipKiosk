@@ -76,8 +76,22 @@ class NavigationPolicyTest {
 
     @Test
     fun internationalisedHostsCompareInPunycode() = check(
-        KioskSettings(startUrl = "https://bücher.example/"),
+        // WebView hands us canonical (punycode) URLs; start URLs are normalised at input time.
+        KioskSettings(startUrl = "https://xn--bcher-kva.example/"),
         "https://xn--bcher-kva.example/p" to ALLOW,
+        "https://XN--BCHER-KVA.example/p" to ALLOW,
+    )
+
+    // Parser-differential guard: anything java.net.URI cannot resolve to a host
+    // fails closed instead of being re-parsed by hand.
+    @Test
+    fun urlsWithoutAParsableHostFailClosed() = check(
+        domain,
+        "https://bücher.example.com/" to BLOCK,
+        "https://evil.com%2F.example.com/" to BLOCK,
+        "https://exa_mple.com/" to BLOCK,
+        "https://example.com＠evil.com/" to BLOCK,
+        "https://evil.com\\@example.com/" to BLOCK,
     )
 
     @Test

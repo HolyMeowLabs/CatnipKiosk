@@ -56,15 +56,13 @@ object NavigationPolicy {
         }
 
     /**
-     * java.net.URI leaves getHost() null for non-ASCII hosts, so fall back to
-     * the authority with any userinfo and port removed.
+     * Only java.net.URI's own host is trusted. When it cannot resolve a host
+     * (non-ASCII, escaped or otherwise irregular authority) the URL fails closed;
+     * re-parsing the authority by hand would be a second parser that can
+     * disagree with Chromium's. WebView supplies canonical punycode URLs, and
+     * user-entered URLs are normalised before they are stored.
      */
-    private fun hostOf(uri: URI): String? {
-        val raw = uri.host ?: uri.rawAuthority
-            ?.substringAfterLast('@')
-            ?.let { if (it.startsWith("[")) it.substringBefore(']') + "]" else it.substringBefore(':') }
-        return normalizeHost(raw)
-    }
+    private fun hostOf(uri: URI): String? = normalizeHost(uri.host)
 
     private fun pathOf(uri: URI): String = uri.rawPath.takeUnless { it.isNullOrEmpty() } ?: "/"
 

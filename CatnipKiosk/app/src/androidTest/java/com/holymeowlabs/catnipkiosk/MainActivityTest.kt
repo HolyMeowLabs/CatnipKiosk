@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import com.google.common.truth.Truth.assertThat
+import com.holymeowlabs.catnipkiosk.lockdown.LockdownController
 import com.holymeowlabs.catnipkiosk.settings.KioskSettings
 import com.holymeowlabs.catnipkiosk.settings.SecurityState
 import com.holymeowlabs.catnipkiosk.settings.SettingsRepository
@@ -23,7 +24,9 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
+import org.junit.Assume.assumeTrue
 import org.junit.Before
+import com.holymeowlabs.catnipkiosk.isTv
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -99,6 +102,8 @@ class MainActivityTest {
         launch()
         awaitRequests("/start", 1)
         shell("cmd role add-role-holder android.app.role.HOME ${context.packageName}")
+        // Google TV keeps the Home role for its own launcher; this scenario is tablet-only.
+        assumeTrue("Home key ignores the Home role on TV", LockdownController(context).isHomeApp() && !isTv(context))
         try {
             UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressHome()
             waitFor("original instance destroyed") { scenario!!.state == Lifecycle.State.DESTROYED }

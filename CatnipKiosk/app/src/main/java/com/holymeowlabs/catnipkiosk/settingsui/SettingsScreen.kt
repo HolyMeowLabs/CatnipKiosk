@@ -45,6 +45,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.holymeowlabs.catnipkiosk.R
+import com.holymeowlabs.catnipkiosk.ui.dpadExitsTextField
+import com.holymeowlabs.catnipkiosk.lockdown.HomeOption
 import com.holymeowlabs.catnipkiosk.settings.KioskSettings
 import com.holymeowlabs.catnipkiosk.settings.NavMode
 import com.holymeowlabs.catnipkiosk.settings.ScheduledReload
@@ -60,8 +62,7 @@ enum class SettingsSection(val title: Int) {
 
 /** What Settings shows about soft lockdown; refreshed whenever the screen resumes. */
 data class StartupStatus(
-    val isHomeApp: Boolean = false,
-    val canRequestHome: Boolean = false,
+    val home: HomeOption = HomeOption.UNAVAILABLE,
     val isHardLockdown: Boolean = false,
 )
 
@@ -163,7 +164,7 @@ private fun ColumnScope.Section(
                 singleLine = true,
                 isError = invalid,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.dpadExitsTextField().fillMaxWidth(),
             )
             if (invalid) Text(stringResource(R.string.setup_url_error), color = MaterialTheme.colorScheme.error)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -201,7 +202,7 @@ private fun ColumnScope.Section(
                     singleLine = true,
                     isError = invalid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.dpadExitsTextField().weight(1f),
                 )
                 Button(onClick = {
                     if (vm.addExtraDomain(newDomain)) newDomain = "" else invalid = true
@@ -262,13 +263,14 @@ private fun ColumnScope.Section(
         SettingsSection.Startup -> {
             Toggle(R.string.settings_start_on_boot, s.startOnBoot) { on -> vm.update { it.copy(startOnBoot = on) } }
             val muted = MaterialTheme.colorScheme.onSurfaceVariant
-            when {
-                startup.isHomeApp -> Text(stringResource(R.string.settings_is_home))
-                startup.canRequestHome -> {
+            when (startup.home) {
+                HomeOption.IS_HOME -> Text(stringResource(R.string.settings_is_home))
+                HomeOption.CAN_REQUEST -> {
                     Button(onClick = onSetHome) { Text(stringResource(R.string.settings_set_home)) }
                     Text(stringResource(R.string.settings_not_home_limitation), color = muted)
                 }
-                else -> Text(stringResource(R.string.settings_home_unavailable), color = muted)
+                HomeOption.UNAVAILABLE -> Text(stringResource(R.string.settings_home_unavailable), color = muted)
+                HomeOption.TV_HOME_KEY_LEAVES -> Text(stringResource(R.string.settings_home_tv), color = muted)
             }
             HorizontalDivider()
             if (startup.isHardLockdown) {

@@ -74,7 +74,8 @@
     <string name="hard_warning">If you forget the PIN, the only way out of hard lockdown is a factory reset, which erases the device.</string>
     <string name="settings_is_home">CatnipKiosk is the Home app. Pressing Home returns here, and the device starts into the kiosk.</string>
     <string name="settings_not_home_limitation">While CatnipKiosk isn\'t the Home app, pressing Home leaves the kiosk, and Android won\'t let it bring itself back or start by itself after a restart.</string>
-    <string name="settings_home_unavailable">This device doesn\'t let you choose a Home app here, so pressing Home leaves the kiosk and it won\'t start by itself after a restart. From a computer with adb you can run: adb shell cmd package set-home-activity com.holymeowlabs.catnipkiosk/.MainActivity</string>
+    <string name="settings_home_unavailable">This device doesn\'t let you choose a Home app here, so pressing Home leaves the kiosk and it won\'t start by itself after a restart.</string>
+    <string name="settings_home_tv">On Google TV the Home button always opens the TV\'s own home screen, so viewers can leave the kiosk with it, and the kiosk won\'t start by itself after a restart.</string>
     <string name="settings_change_pin">Change PIN</string>
     <string name="settings_pin_current">Current PIN</string>
     <string name="settings_pin_new">New PIN</string>

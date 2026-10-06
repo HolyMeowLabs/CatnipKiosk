@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.holymeowlabs.catnipkiosk.R
+import com.holymeowlabs.catnipkiosk.ui.dpadExitsTextField
 import com.holymeowlabs.catnipkiosk.settings.NavMode
 
 /** First-run setup: start page → navigation → PIN. Works with touch or D-pad + on-screen keyboard. */
@@ -72,7 +73,7 @@ private fun StartUrlStep(vm: SetupViewModel, state: SetupUi) {
         singleLine = true,
         isError = state.urlError,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
-        modifier = Modifier.fillMaxWidth().testTag("setup_url"),
+        modifier = Modifier.dpadExitsTextField().fillMaxWidth().testTag("setup_url"),
     )
     when {
         state.allowedDomain != null -> Text(stringResource(R.string.setup_allowed_domain, state.allowedDomain))
@@ -103,7 +104,7 @@ private fun NavigationStep(vm: SetupViewModel, state: SetupUi) {
         supportingText = { Text(stringResource(R.string.setup_extra_domains_help)) },
         isError = state.extraDomainsError,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.dpadExitsTextField().fillMaxWidth(),
     )
     if (state.extraDomainsError) {
         Text(stringResource(R.string.setup_extra_domains_error), color = MaterialTheme.colorScheme.error)
@@ -145,7 +146,7 @@ private fun PinField(value: String, onChange: (String) -> Unit, label: Int, tag:
         singleLine = true,
         visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-        modifier = Modifier.fillMaxWidth().testTag(tag),
+        modifier = Modifier.dpadExitsTextField().fillMaxWidth().testTag(tag),
     )
 }
 

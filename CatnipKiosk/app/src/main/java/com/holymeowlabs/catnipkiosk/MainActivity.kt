@@ -61,6 +61,7 @@ import com.holymeowlabs.catnipkiosk.security.PinHasher
 import com.holymeowlabs.catnipkiosk.lockdown.DpmOps
 import com.holymeowlabs.catnipkiosk.lockdown.HardLockdown
 import com.holymeowlabs.catnipkiosk.lockdown.HardLockdownStepsScreen
+import com.holymeowlabs.catnipkiosk.lockdown.HomeOption
 import com.holymeowlabs.catnipkiosk.lockdown.LockdownController
 import com.holymeowlabs.catnipkiosk.lockdown.LockdownTier
 import com.holymeowlabs.catnipkiosk.settingsui.SettingsScreen
@@ -185,8 +186,7 @@ class MainActivity : ComponentActivity() {
                                 startup = remember(lockdownRefresh) {
                                     val lockdown = LockdownController(this@MainActivity)
                                     StartupStatus(
-                                        isHomeApp = lockdown.isHomeApp(),
-                                        canRequestHome = lockdown.homeRoleRequestIntent() != null,
+                                        home = HomeOption.of(isTv, lockdown.isHomeApp(), lockdown.homeRoleRequestIntent() != null),
                                         isHardLockdown = lockdown.tier() == LockdownTier.HARD,
                                     )
                                 },

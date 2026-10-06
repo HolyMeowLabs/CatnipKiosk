@@ -48,7 +48,6 @@ import com.holymeowlabs.catnipkiosk.ui.theme.KioskTheme
 import com.holymeowlabs.catnipkiosk.web.KioskWebView
 import com.holymeowlabs.catnipkiosk.web.WebEvent
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -64,7 +63,6 @@ class MainActivity : ComponentActivity() {
     private val keySequence = KeySequenceDetector()
     private val cornerTaps by lazy { CornerTapDetector(zoneSizePx = SECRET_CORNER_DP * resources.displayMetrics.density) }
     private var pin by mutableStateOf<PinViewModel?>(null)
-    private var pinJobs: Job? = null
     internal var route by mutableStateOf<Route?>(null)
         private set
     private var networkAvailable by mutableStateOf(true)
@@ -140,7 +138,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openPin() {
-        val stored = security ?: return
+        val vmPin = pin ?: createPinViewModel() ?: return
+        vmPin.reset()
+        route = Route.Pin
+    }
+
+    /** Created once from the first stored state; it then owns the in-memory security state. */
+    private fun createPinViewModel(): PinViewModel? {
+        val stored = security ?: return null
         val vmPin = PinViewModel(
             initial = stored,
             lockoutEnabled = kioskSettings?.pinLockoutEnabled == true,
@@ -150,13 +155,10 @@ class MainActivity : ComponentActivity() {
             nowMs = System::currentTimeMillis,
             work = Dispatchers.Default,
         )
-        pinJobs?.cancel()
-        pinJobs = lifecycleScope.launch {
-            launch { vmPin.unlocked.collect { route = Route.Settings } }
-            launch { vmPin.cancelled.collect { route = Route.Kiosk } }
-        }
+        lifecycleScope.launch { vmPin.unlocked.collect { route = Route.Settings } }
+        lifecycleScope.launch { vmPin.cancelled.collect { route = Route.Kiosk } }
         pin = vmPin
-        route = Route.Pin
+        return vmPin
     }
 
     override fun onStart() {

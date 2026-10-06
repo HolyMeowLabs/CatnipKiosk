@@ -67,9 +67,18 @@ class PinViewModel(
         submit()
     }
 
+    /**
+     * Called each time the PIN screen opens. One instance serves the Activity's lifetime: a fresh
+     * one per opening would start from a stale stored state and could lose an in-flight attempt.
+     */
+    fun reset() {
+        if (!busy) entry.clear()
+        _state.value = PinUi(digits = entry.length, lockedUntilMs = _state.value.lockedUntilMs)
+    }
+
     fun cancel() {
         entry.clear()
-        _state.value = PinUi()
+        _state.value = PinUi(lockedUntilMs = _state.value.lockedUntilMs)
         _cancelled.tryEmit(Unit)
     }
 

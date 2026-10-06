@@ -110,6 +110,26 @@ class SecretEntryTest {
     }
 
     @Test
+    fun failedAttemptsSurviveCancellingAndReopeningThePinScreen() = runBlocking {
+        repo.saveSettings(KioskSettings(startUrl = "http://localhost:${server.port}/start", pinLockoutEnabled = true))
+        delay(500)
+        repeat(2) {
+            repeat(5) { device.click(10, 10) }
+            waitFor { onActivity { it.route } == Route.Pin }
+            "9999".forEach { c -> device.pressKeyCode(KeyEvent.KEYCODE_0 + (c - '0')) }
+            device.findObject(By.text("OK")).click()
+            delay(1_000)
+            device.pressBack()
+            waitFor { onActivity { it.route } == Route.Kiosk }
+        }
+        repeat(5) { device.click(10, 10) }
+        waitFor { onActivity { it.route } == Route.Pin }
+        "9999".forEach { c -> device.pressKeyCode(KeyEvent.KEYCODE_0 + (c - '0')) }
+        device.findObject(By.text("OK")).click()
+        waitFor { device.hasObject(By.textContains("2 attempts left")) }
+    }
+
+    @Test
     fun correctPinOpensSettingsAndBackFromPinReturnsToTheKiosk() = runBlocking {
         repeat(5) { device.click(10, 10) }
         waitFor { onActivity { it.route } == Route.Pin }

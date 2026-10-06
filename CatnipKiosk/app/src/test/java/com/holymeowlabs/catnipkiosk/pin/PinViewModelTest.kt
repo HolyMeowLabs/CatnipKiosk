@@ -22,12 +22,13 @@ class PinViewModelTest {
     private val hasher = PinHasher(iterations = 1_000)
 
     private inner class Harness(scope: TestScope, pin: String, lockout: Boolean = true) {
+        val initial = hasher.create(pin)
         val saves = mutableListOf<SecurityState>()
         val unlocks = mutableListOf<Unit>()
         val cancels = mutableListOf<Unit>()
         private val dispatcher = UnconfinedTestDispatcher(scope.testScheduler)
         val vm = PinViewModel(
-            initial = hasher.create(pin),
+            initial = initial,
             lockoutEnabled = lockout,
             gate = PinGate(hasher) { scope.currentTime },
             save = { saves += it },
@@ -154,6 +155,22 @@ class PinViewModelTest {
         "9998".forEach(vm::digit); vm.ok(); runCurrent()
         assertThat(saves.map { it.failedAttempts }).containsExactly(1, 2).inOrder()
         assertThat(vm.state.value.error).isEqualTo(PinError.Wrong(attemptsLeft = 3))
+    }
+
+    @Test
+    fun ownCounterUpdatesKeepTheViewModelCurrent() = runTest {
+        val h = Harness(this, "1234")
+        h.type("9999"); h.vm.ok(); runCurrent()
+        assertThat(h.vm.isCurrentFor(h.saves.last(), lockoutEnabled = true)).isTrue()
+    }
+
+    @Test
+    fun aNewPinOrLockoutSettingMakesTheViewModelStale() = runTest {
+        val h = Harness(this, "1234")
+        assertThat(h.vm.isCurrentFor(hasher.create("5678"), lockoutEnabled = true)).isFalse()
+        assertThat(h.vm.isCurrentFor(null, lockoutEnabled = true)).isFalse()
+        assertThat(h.vm.isCurrentFor(h.initial, lockoutEnabled = false)).isFalse()
+        assertThat(h.vm.isCurrentFor(h.initial, lockoutEnabled = true)).isTrue()
     }
 
     @Test

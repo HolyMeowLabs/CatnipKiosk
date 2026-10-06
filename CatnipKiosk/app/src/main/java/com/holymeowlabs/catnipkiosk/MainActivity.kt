@@ -201,6 +201,7 @@ class MainActivity : ComponentActivity() {
     private fun KioskSettings.navigationFields() = listOf(startUrl, navMode, includeSubdomains, extraDomains)
 
     private fun newWebView() = KioskWebView(this).apply {
+        if (pin?.isCurrentFor(storedSecurity, stored?.pinLockoutEnabled == true) == false) pin = null
         settingsProvider = { checkNotNull(kioskSettings) }
         onEvent = { event ->
             if (event == WebEvent.RendererGone) replaceWebView()

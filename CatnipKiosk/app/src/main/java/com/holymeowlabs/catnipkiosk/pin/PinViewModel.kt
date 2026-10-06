@@ -76,6 +76,17 @@ class PinViewModel(
         _state.value = PinUi(digits = entry.length, lockedUntilMs = _state.value.lockedUntilMs)
     }
 
+    /**
+     * False once the stored credential or lockout setting is no longer the one this instance
+     * checks against (PIN changed, setup redone); the owner must then replace it, or the old PIN
+     * would keep working. Its own saves change only the counters, which keeps it current.
+     */
+    fun isCurrentFor(stored: SecurityState?, lockoutEnabled: Boolean): Boolean =
+        stored != null && lockoutEnabled == this.lockoutEnabled &&
+            stored.pinHashB64 == security.pinHashB64 &&
+            stored.pinSaltB64 == security.pinSaltB64 &&
+            stored.iterations == security.iterations
+
     fun cancel() {
         entry.clear()
         _state.value = PinUi(lockedUntilMs = _state.value.lockedUntilMs)

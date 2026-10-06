@@ -54,6 +54,12 @@ class RouteTest {
     }
 
     @Test
+    fun aSystemScreenOpenedFromSettingsKeepsTheSession() {
+        assertThat(routeAfterStop(Route.Settings, openedSystemScreen = true)).isEqualTo(Route.Settings)
+        assertThat(routeAfterStop(Route.Pin, openedSystemScreen = true)).isEqualTo(Route.Kiosk)
+    }
+
+    @Test
     fun anIdleAdminSessionTimesOut() {
         val last = 1_000_000L
         assertThat(adminSessionExpired(Route.Settings, last, last + ADMIN_IDLE_MS - 1)).isFalse()

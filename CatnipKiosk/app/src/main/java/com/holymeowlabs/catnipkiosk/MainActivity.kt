@@ -58,6 +58,7 @@ import com.holymeowlabs.catnipkiosk.pin.PinScreen
 import com.holymeowlabs.catnipkiosk.pin.PinViewModel
 import com.holymeowlabs.catnipkiosk.security.PinGate
 import com.holymeowlabs.catnipkiosk.security.PinHasher
+import com.holymeowlabs.catnipkiosk.lockdown.BootOption
 import com.holymeowlabs.catnipkiosk.lockdown.DpmOps
 import com.holymeowlabs.catnipkiosk.lockdown.HardLockdown
 import com.holymeowlabs.catnipkiosk.lockdown.HardLockdownStepsScreen
@@ -105,6 +106,9 @@ class MainActivity : ComponentActivity() {
     private var webViewGeneration by mutableIntStateOf(0)
     private var lastInputMs = 0L
     private var lockdownRefresh by mutableIntStateOf(0)
+
+    /** Settings opened a system screen itself; returning from it keeps the admin session. */
+    private var openedSystemScreen = false
     private val homeRoleRequest = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { lockdownRefresh++ }
     private var cursorEnabled by mutableStateOf(false)
     private var cursor: CursorController? = null
@@ -188,6 +192,13 @@ class MainActivity : ComponentActivity() {
                                     val lockdown = LockdownController(this@MainActivity)
                                     StartupStatus(
                                         home = HomeOption.of(isTv, lockdown.isHomeApp(), lockdown.homeRoleRequestIntent() != null),
+                                        boot = BootOption.of(
+                                            startOnBoot = current.startOnBoot,
+                                            startsAsHome = lockdown.startsAsHome(),
+                                            isDeviceOwner = lockdown.tier() == LockdownTier.HARD,
+                                            canStartFromBackground = lockdown.canStartFromBackground(),
+                                            permissionScreenAvailable = lockdown.overlayPermissionIntent() != null,
+                                        ),
                                         isHardLockdown = lockdown.tier() == LockdownTier.HARD,
                                     )
                                 },
@@ -197,7 +208,16 @@ class MainActivity : ComponentActivity() {
                                     lockdownRefresh++
                                 },
                                 onSetHome = {
-                                    LockdownController(this@MainActivity).homeRoleRequestIntent()?.let(homeRoleRequest::launch)
+                                    LockdownController(this@MainActivity).homeRoleRequestIntent()?.let {
+                                        openedSystemScreen = true
+                                        homeRoleRequest.launch(it)
+                                    }
+                                },
+                                onAllowStartOnBoot = {
+                                    LockdownController(this@MainActivity).overlayPermissionIntent()?.let {
+                                        openedSystemScreen = true
+                                        homeRoleRequest.launch(it)
+                                    }
                                 },
                             )
                         }
@@ -327,7 +347,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        route = routeAfterStop(route)
+        route = routeAfterStop(route, openedSystemScreen)
         connectivity.stop()
         super.onStop()
     }
@@ -336,6 +356,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // Re-applied on every return to the front, so an admin's exit never leaves the device unlocked.
         HardLockdown(DpmOps(this), blockDebugging = !BuildConfig.DEBUG).apply()
+        openedSystemScreen = false
         lockdownRefresh++
     }
 

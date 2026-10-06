@@ -20,8 +20,23 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Release signing comes only from the environment (CI secrets or a local shell), never a file
+    // in this public repo. Without CATNIP_KEYSTORE the release build is left unsigned.
+    val releaseKeystore = providers.environmentVariable("CATNIP_KEYSTORE").orNull
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = providers.environmentVariable("CATNIP_KEYSTORE_PASSWORD").orNull
+                keyAlias = providers.environmentVariable("CATNIP_KEY_ALIAS").orNull
+                keyPassword = providers.environmentVariable("CATNIP_KEY_PASSWORD").orNull
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (releaseKeystore != null) signingConfig = signingConfigs.getByName("release")
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")

@@ -29,7 +29,10 @@ const val ADMIN_IDLE_MS = 120_000L
 
 private fun Route?.isAdmin() = this == Route.Pin || this == Route.Settings || this == Route.HardLockdownSteps
 
-/** Leaving the app (Home, screen off, another app) ends the admin session; return needs the PIN again. */
+/**
+ * Leaving the app (Home, screen off, another app) ends the admin session; return needs the PIN again.
+ * This includes system screens Settings opens itself: from those anyone can wander to other apps.
+ */
 fun routeAfterStop(current: Route?): Route? = if (current.isAdmin()) Route.Kiosk else current
 
 fun adminSessionExpired(current: Route?, lastInputMs: Long, nowMs: Long): Boolean =

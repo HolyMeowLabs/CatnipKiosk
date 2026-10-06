@@ -96,6 +96,15 @@ class ZoomAndFullscreenTest {
     }
 
     @Test
+    fun rendererCrashDuringFullScreenClosesTheFullScreenView() = runBlocking {
+        launch(zoom = 100)
+        device.click(device.displayWidth / 2, device.displayHeight / 2)
+        waitFor { onActivity { it.isShowingFullScreen } }
+        onActivity { it.webView.loadUrl("chrome://crash") }
+        waitFor { !onActivity { it.isShowingFullScreen } }
+    }
+
+    @Test
     fun fullScreenShowsOverThePageAndBackLeavesItWithoutNavigating() = runBlocking {
         launch(zoom = 100)
         val url = onActivity { it.webView.url }

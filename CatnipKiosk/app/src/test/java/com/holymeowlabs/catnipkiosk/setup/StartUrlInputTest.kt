@@ -30,6 +30,12 @@ class StartUrlInputTest {
     }
 
     @Test
+    fun singleWordLanHostsAreAcceptedForTheStartPage() {
+        assertThat(ok("nas:5000")).isEqualTo(Ok("https://nas:5000/"))
+        assertThat(ok("http://NAS:5000/photos")).isEqualTo(Ok("http://nas:5000/photos"))
+    }
+
+    @Test
     fun queryAndFragmentAreKept() {
         assertThat(ok("example.com/a?b=1#c")).isEqualTo(Ok("https://example.com/a?b=1#c"))
     }

@@ -24,7 +24,7 @@ class BootReceiver : BroadcastReceiver() {
                 val start = BootDecision.shouldStart(
                     startOnBoot = settings?.startOnBoot == true,
                     configured = configured,
-                    isHome = lockdown.isHomeApp(),
+                    isHome = lockdown.startsAsHome(),
                     isDeviceOwner = lockdown.tier() == LockdownTier.HARD,
                     canStartFromBackground = lockdown.canStartFromBackground(),
                 )

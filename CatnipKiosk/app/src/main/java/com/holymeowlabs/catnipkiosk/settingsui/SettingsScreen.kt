@@ -46,6 +46,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.holymeowlabs.catnipkiosk.R
 import com.holymeowlabs.catnipkiosk.ui.dpadExitsTextField
+import com.holymeowlabs.catnipkiosk.lockdown.BootOption
 import com.holymeowlabs.catnipkiosk.lockdown.HomeOption
 import com.holymeowlabs.catnipkiosk.settings.KioskSettings
 import com.holymeowlabs.catnipkiosk.settings.NavMode
@@ -67,6 +68,7 @@ enum class SettingsSection(val title: Int) {
 /** What Settings shows about soft lockdown; refreshed whenever the screen resumes. */
 data class StartupStatus(
     val home: HomeOption = HomeOption.UNAVAILABLE,
+    val boot: BootOption = BootOption.OFF,
     val isHardLockdown: Boolean = false,
 )
 
@@ -80,6 +82,7 @@ fun SettingsScreen(
     onReloadNow: () -> Unit,
     startup: StartupStatus = StartupStatus(),
     onSetHome: () -> Unit = {},
+    onAllowStartOnBoot: () -> Unit = {},
     onShowHardSteps: () -> Unit = {},
     onRemoveHard: () -> Unit = {},
 ) {
@@ -95,7 +98,7 @@ fun SettingsScreen(
             Button(onClick = onBack, modifier = Modifier.padding(start = 12.dp)) { Text(stringResource(R.string.settings_back_to_kiosk)) }
         }
         val sectionContent: @Composable ColumnScope.(SettingsSection) -> Unit = { section ->
-            Section(section, vm, settings, onReloadNow, startup, onSetHome, onShowHardSteps, { confirmingRemove = true }) {
+            Section(section, vm, settings, onReloadNow, startup, onSetHome, onAllowStartOnBoot, onShowHardSteps, { confirmingRemove = true }) {
                 changingPin = true
             }
         }
@@ -119,7 +122,8 @@ fun SettingsScreen(
             }
         } else {
             Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = 16.dp).widthIn(max = 720.dp),
+                // widthIn before fillMaxWidth, or the max width has no effect.
+                Modifier.widthIn(max = 720.dp).fillMaxWidth().fillMaxHeight().verticalScroll(rememberScrollState()).padding(top = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 SettingsSection.entries.forEach { section ->
@@ -153,6 +157,7 @@ private fun ColumnScope.Section(
     onReloadNow: () -> Unit,
     startup: StartupStatus,
     onSetHome: () -> Unit,
+    onAllowStartOnBoot: () -> Unit,
     onShowHardSteps: () -> Unit,
     onRemoveHard: () -> Unit,
     onChangePin: () -> Unit,
@@ -276,6 +281,17 @@ private fun ColumnScope.Section(
         SettingsSection.Startup -> {
             Toggle(R.string.settings_start_on_boot, s.startOnBoot) { on -> vm.update { it.copy(startOnBoot = on) } }
             val muted = MaterialTheme.colorScheme.onSurfaceVariant
+            when (startup.boot) {
+                BootOption.OFF -> Unit
+                BootOption.AUTOMATIC -> Text(stringResource(R.string.boot_automatic), color = muted)
+                BootOption.READY -> Text(stringResource(R.string.boot_ready), color = muted)
+                BootOption.NEEDS_PERMISSION -> {
+                    Text(stringResource(R.string.boot_needs_permission), color = muted)
+                    Button(onClick = onAllowStartOnBoot) { Text(stringResource(R.string.boot_allow)) }
+                }
+                BootOption.NEEDS_ADB -> Text(stringResource(R.string.boot_needs_adb), color = muted)
+            }
+            HorizontalDivider()
             when (startup.home) {
                 HomeOption.IS_HOME -> Text(stringResource(R.string.settings_is_home))
                 HomeOption.CAN_REQUEST -> {

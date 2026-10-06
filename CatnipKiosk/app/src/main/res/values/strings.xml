@@ -78,9 +78,14 @@
     <string name="hard_usb_off">While hard lockdown is on, CatnipKiosk turns USB debugging off so nobody can use a cable and a computer to leave the kiosk. Removing hard lockdown allows it again.</string>
     <string name="hard_warning">If you forget the PIN, the only way out of hard lockdown is a factory reset, which erases the device.</string>
     <string name="settings_is_home">CatnipKiosk is the Home app. Pressing Home returns here, and the device starts into the kiosk.</string>
-    <string name="settings_not_home_limitation">While CatnipKiosk isn\'t the Home app, pressing Home leaves the kiosk, and Android won\'t let it bring itself back or start by itself after a restart.</string>
-    <string name="settings_home_unavailable">This device doesn\'t let you choose a Home app here, so pressing Home leaves the kiosk and it won\'t start by itself after a restart.</string>
-    <string name="settings_home_tv">On Google TV the Home button always opens the TV\'s own home screen, so viewers can leave the kiosk with it, and the kiosk won\'t start by itself after a restart.</string>
+    <string name="settings_not_home_limitation">While CatnipKiosk isn\'t the Home app, pressing Home leaves the kiosk, and Android won\'t let it bring itself back.</string>
+    <string name="settings_home_unavailable">This device doesn\'t let you choose a Home app here, so pressing Home leaves the kiosk.</string>
+    <string name="settings_home_tv">On Google TV the Home button always opens the TV\'s own home screen, so viewers can leave the kiosk with it.</string>
+    <string name="boot_automatic">The device starts into the kiosk by itself.</string>
+    <string name="boot_ready">The kiosk will start after the device restarts.</string>
+    <string name="boot_needs_permission">To start after a restart, allow CatnipKiosk to \"Display over other apps\".</string>
+    <string name="boot_allow">Allow start on boot</string>
+    <string name="boot_needs_adb">This device has no screen to allow starting after a restart. From a computer with adb, run: adb shell appops set com.holymeowlabs.catnipkiosk SYSTEM_ALERT_WINDOW allow</string>
     <string name="settings_change_pin">Change PIN</string>
     <string name="settings_pin_current">Current PIN</string>
     <string name="settings_pin_new">New PIN</string>

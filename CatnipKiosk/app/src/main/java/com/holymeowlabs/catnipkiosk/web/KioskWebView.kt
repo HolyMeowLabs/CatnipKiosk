@@ -24,6 +24,9 @@ class KioskWebView(context: Context) : WebView(context) {
     /** The current main-frame load was blocked or failed; its error page "finishing" is not PageLoaded. */
     internal var currentLoadFailed = false
 
+    /** Set by [loadStart]: once the start page is showing, Back has nowhere earlier to go. */
+    internal var clearHistoryWhenLoaded = false
+
     /** The main-frame URL most recently requested, to tell its SSL errors from subresources'. */
     internal var mainFrameUrl: String? = null
 
@@ -49,6 +52,7 @@ class KioskWebView(context: Context) : WebView(context) {
         val url = settingsProvider().startUrl
         initialLoad = true
         currentLoadFailed = false
+        clearHistoryWhenLoaded = true
         mainFrameUrl = url
         loadUrl(url)
     }

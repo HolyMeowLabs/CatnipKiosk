@@ -55,7 +55,7 @@ object StartUrlInput {
         val hostText = authority.substringBefore(':')
         val portText = authority.substringAfter(':', missingDelimiterValue = "")
         // DomainInput gives the punycode, lowercase host that NavigationPolicy compares against.
-        val host = DomainInput.normalize(hostText) ?: return Result.Invalid
+        val host = DomainInput.normalize(hostText, allowSingleLabel = true) ?: return Result.Invalid
         if (portText.isNotEmpty() && portText.toIntOrNull()?.takeIf { it in 1..65535 } == null) return Result.Invalid
         val port = if (portText.isEmpty()) "" else ":$portText"
 

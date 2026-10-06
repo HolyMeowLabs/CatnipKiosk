@@ -58,7 +58,9 @@ import com.holymeowlabs.catnipkiosk.pin.PinScreen
 import com.holymeowlabs.catnipkiosk.pin.PinViewModel
 import com.holymeowlabs.catnipkiosk.security.PinGate
 import com.holymeowlabs.catnipkiosk.security.PinHasher
+import com.holymeowlabs.catnipkiosk.lockdown.BootOption
 import com.holymeowlabs.catnipkiosk.lockdown.DpmOps
+import com.holymeowlabs.catnipkiosk.lockdown.ExitPlan
 import com.holymeowlabs.catnipkiosk.lockdown.HardLockdown
 import com.holymeowlabs.catnipkiosk.lockdown.HardLockdownStepsScreen
 import com.holymeowlabs.catnipkiosk.lockdown.HomeOption
@@ -80,6 +82,7 @@ import com.holymeowlabs.catnipkiosk.web.KioskWebView
 import com.holymeowlabs.catnipkiosk.web.WebEvent
 import java.lang.ref.WeakReference
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -99,6 +102,7 @@ class MainActivity : ComponentActivity() {
     private val keySequence = KeySequenceDetector()
     private val cornerTaps by lazy { CornerTapDetector(zoneSizePx = SECRET_CORNER_DP * resources.displayMetrics.density) }
     private var pin by mutableStateOf<PinViewModel?>(null)
+    private var pinCollectors: Job? = null
     internal var route by mutableStateOf<Route?>(null)
         private set
     private var networkAvailable by mutableStateOf(true)
@@ -188,6 +192,13 @@ class MainActivity : ComponentActivity() {
                                     val lockdown = LockdownController(this@MainActivity)
                                     StartupStatus(
                                         home = HomeOption.of(isTv, lockdown.isHomeApp(), lockdown.homeRoleRequestIntent() != null),
+                                        boot = BootOption.of(
+                                            startOnBoot = current.startOnBoot,
+                                            startsAsHome = lockdown.startsAsHome(),
+                                            isDeviceOwner = lockdown.tier() == LockdownTier.HARD,
+                                            canStartFromBackground = lockdown.canStartFromBackground(),
+                                            permissionScreenAvailable = lockdown.overlayPermissionIntent() != null,
+                                        ),
                                         isHardLockdown = lockdown.tier() == LockdownTier.HARD,
                                     )
                                 },
@@ -198,6 +209,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onSetHome = {
                                     LockdownController(this@MainActivity).homeRoleRequestIntent()?.let(homeRoleRequest::launch)
+                                },
+                                onAllowStartOnBoot = {
+                                    LockdownController(this@MainActivity).overlayPermissionIntent()?.let(homeRoleRequest::launch)
                                 },
                             )
                         }
@@ -315,8 +329,11 @@ class MainActivity : ComponentActivity() {
             nowMs = System::currentTimeMillis,
             work = Dispatchers.Default,
         )
-        lifecycleScope.launch { vmPin.unlocked.collect { route = Route.Settings } }
-        lifecycleScope.launch { vmPin.cancelled.collect { route = Route.Kiosk } }
+        pinCollectors?.cancel()
+        pinCollectors = lifecycleScope.launch {
+            launch { vmPin.unlocked.collect { route = Route.Settings } }
+            launch { vmPin.cancelled.collect { route = Route.Kiosk } }
+        }
         pin = vmPin
         return vmPin
     }
@@ -340,12 +357,15 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * In hard lockdown, leaves lock task and opens system Settings for the admin; the kiosk stays
-     * the Home app, so returning Home brings it back and re-locks it (see onResume).
+     * When closing would only reopen the kiosk (hard lockdown, or it is the Home app), opens system
+     * Settings instead; in hard lockdown it leaves lock task first, and returning Home brings the
+     * kiosk back and re-locks it (see onResume).
      */
     private fun exitApp() {
-        if (LockdownController(this).tier() == LockdownTier.HARD) {
-            HardLockdown(DpmOps(this)).suspendForSession()
+        val lockdown = LockdownController(this)
+        val hard = lockdown.tier() == LockdownTier.HARD
+        if (ExitPlan.of(hard, lockdown.isHomeApp()) == ExitPlan.OPEN_SYSTEM_SETTINGS) {
+            if (hard) HardLockdown(DpmOps(this)).suspendForSession()
             startActivity(Intent(Settings.ACTION_SETTINGS))
         }
         finishAndRemoveTask()
@@ -365,7 +385,10 @@ class MainActivity : ComponentActivity() {
     private fun onStored(stored: KioskSettings?, storedSecurity: SecurityState?) {
         kioskSettings = stored
         security = storedSecurity
-        if (pin?.isCurrentFor(storedSecurity, stored?.pinLockoutEnabled == true) == false) pin = null
+        if (pin?.isCurrentFor(storedSecurity, stored?.pinLockoutEnabled == true) == false) {
+            pinCollectors?.cancel()
+            pin = null
+        }
         route = nextRoute(route, stored, storedSecurity)
         if (stored == null || route == Route.Setup) {
             // Setup saves settings before the PIN; nothing is applied until the kiosk is configured.

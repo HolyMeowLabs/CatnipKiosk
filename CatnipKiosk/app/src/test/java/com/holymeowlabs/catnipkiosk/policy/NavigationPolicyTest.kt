@@ -57,21 +57,21 @@ class NavigationPolicyTest {
     fun lookalikeDomainsAreBlocked() = check(
         domain,
         "https://evilexample.com/" to BLOCK,
-        "https://example.com.evil.net/" to BLOCK,
+        "https://example.com.evil.example/" to BLOCK,
     )
 
     @Test
     fun extraDomainsAllowThemselvesAndTheirSubdomainsOnly() = check(
-        domain.copy(extraDomains = listOf("login.example-sso.com")),
-        "https://login.example-sso.com/auth" to ALLOW,
-        "https://a.login.example-sso.com/" to ALLOW,
-        "https://example-sso.com/" to BLOCK,
+        domain.copy(extraDomains = listOf("login.example.org")),
+        "https://login.example.org/auth" to ALLOW,
+        "https://a.login.example.org/" to ALLOW,
+        "https://example.org/" to BLOCK,
     )
 
     @Test
     fun extraDomainsStillApplyWhenSubdomainsAreOff() = check(
-        domain.copy(includeSubdomains = false, extraDomains = listOf("login.example-sso.com")),
-        "https://a.login.example-sso.com/" to ALLOW,
+        domain.copy(includeSubdomains = false, extraDomains = listOf("login.example.org")),
+        "https://a.login.example.org/" to ALLOW,
     )
 
     @Test
@@ -88,10 +88,10 @@ class NavigationPolicyTest {
     fun urlsWithoutAParsableHostFailClosed() = check(
         domain,
         "https://bücher.example.com/" to BLOCK,
-        "https://evil.com%2F.example.com/" to BLOCK,
+        "https://evil.example%2F.example.com/" to BLOCK,
         "https://exa_mple.com/" to BLOCK,
-        "https://example.com＠evil.com/" to BLOCK,
-        "https://evil.com\\@example.com/" to BLOCK,
+        "https://example.com＠evil.example/" to BLOCK,
+        "https://evil.example\\@example.com/" to BLOCK,
     )
 
     @Test

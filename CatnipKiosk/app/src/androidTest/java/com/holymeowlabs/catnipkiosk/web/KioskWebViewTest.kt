@@ -199,6 +199,24 @@ class KioskWebViewTest {
     }
 
     @Test
+    fun reloadingTheStartPageClearsBackHistory() = runBlocking {
+        routes["/two"] = html("two")
+        startWith("""<a href="$local/two" style="position:fixed;left:0;top:0;width:100vw;height:100vh">two</a>""")
+        tapCentre()
+        host.awaitEvent<WebEvent.PageLoaded>()
+        assertThat(canGoBack()).isTrue() // precondition: the tap left a history entry
+        InstrumentationRegistry.getInstrumentation().runOnMainSync { host.view.loadStart() }
+        host.awaitEvent<WebEvent.PageLoaded>()
+        assertThat(canGoBack()).isFalse()
+    }
+
+    private fun canGoBack(): Boolean {
+        var back = false
+        InstrumentationRegistry.getInstrumentation().runOnMainSync { back = host.view.canGoBack() }
+        return back
+    }
+
+    @Test
     fun subframeNavigationIsNotFiltered() = runBlocking {
         routes["/frame"] =
             html("""<a id="l" href="$other/frame2">f</a><script>document.getElementById('l').click()</script>""")

@@ -24,7 +24,7 @@ class SettingsRepositoryTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val settings = KioskSettings(
         startUrl = "https://example.com/lobby",
-        extraDomains = listOf("login.example-sso.com"),
+        extraDomains = listOf("login.example.org"),
         scheduledReload = ScheduledReload.EveryMinutes(30),
     )
     private val security = SecurityState("aGFzaA==", "c2FsdA==", 120_000, failedAttempts = 2)

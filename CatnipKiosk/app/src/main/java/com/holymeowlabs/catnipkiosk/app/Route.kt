@@ -31,13 +31,9 @@ private fun Route?.isAdmin() = this == Route.Pin || this == Route.Settings || th
 
 /**
  * Leaving the app (Home, screen off, another app) ends the admin session; return needs the PIN again.
- * A system screen Settings itself opened (Home role, overlay permission) keeps Settings open.
+ * This includes system screens Settings opens itself: from those anyone can wander to other apps.
  */
-fun routeAfterStop(current: Route?, openedSystemScreen: Boolean = false): Route? = when {
-    openedSystemScreen && current == Route.Settings -> current
-    current.isAdmin() -> Route.Kiosk
-    else -> current
-}
+fun routeAfterStop(current: Route?): Route? = if (current.isAdmin()) Route.Kiosk else current
 
 fun adminSessionExpired(current: Route?, lastInputMs: Long, nowMs: Long): Boolean =
     current.isAdmin() && nowMs - lastInputMs >= ADMIN_IDLE_MS

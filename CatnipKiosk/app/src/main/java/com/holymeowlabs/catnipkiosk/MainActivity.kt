@@ -106,9 +106,6 @@ class MainActivity : ComponentActivity() {
     private var webViewGeneration by mutableIntStateOf(0)
     private var lastInputMs = 0L
     private var lockdownRefresh by mutableIntStateOf(0)
-
-    /** Settings opened a system screen itself; returning from it keeps the admin session. */
-    private var openedSystemScreen = false
     private val homeRoleRequest = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { lockdownRefresh++ }
     private var cursorEnabled by mutableStateOf(false)
     private var cursor: CursorController? = null
@@ -208,16 +205,10 @@ class MainActivity : ComponentActivity() {
                                     lockdownRefresh++
                                 },
                                 onSetHome = {
-                                    LockdownController(this@MainActivity).homeRoleRequestIntent()?.let {
-                                        openedSystemScreen = true
-                                        homeRoleRequest.launch(it)
-                                    }
+                                    LockdownController(this@MainActivity).homeRoleRequestIntent()?.let(homeRoleRequest::launch)
                                 },
                                 onAllowStartOnBoot = {
-                                    LockdownController(this@MainActivity).overlayPermissionIntent()?.let {
-                                        openedSystemScreen = true
-                                        homeRoleRequest.launch(it)
-                                    }
+                                    LockdownController(this@MainActivity).overlayPermissionIntent()?.let(homeRoleRequest::launch)
                                 },
                             )
                         }
@@ -347,7 +338,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        route = routeAfterStop(route, openedSystemScreen)
+        route = routeAfterStop(route)
         connectivity.stop()
         super.onStop()
     }
@@ -356,7 +347,6 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // Re-applied on every return to the front, so an admin's exit never leaves the device unlocked.
         HardLockdown(DpmOps(this), blockDebugging = !BuildConfig.DEBUG).apply()
-        openedSystemScreen = false
         lockdownRefresh++
     }
 

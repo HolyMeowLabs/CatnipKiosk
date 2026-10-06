@@ -3,7 +3,9 @@ package com.holymeowlabs.catnipkiosk
 import android.annotation.SuppressLint
 import android.app.UiModeManager
 import android.content.res.Configuration
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -324,15 +326,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (!hardLockdownSuspended) HardLockdown(DpmOps(this)).apply()
+        // Re-applied on every return to the front, so an admin's exit never leaves the device unlocked.
+        HardLockdown(DpmOps(this)).apply()
         lockdownRefresh++
     }
 
-    /** In hard lockdown, leaves lock task for the rest of this process's life before closing. */
+    /**
+     * In hard lockdown, leaves lock task and opens system Settings for the admin; the kiosk stays
+     * the Home app, so returning Home brings it back and re-locks it (see onResume).
+     */
     private fun exitApp() {
         if (LockdownController(this).tier() == LockdownTier.HARD) {
             HardLockdown(DpmOps(this)).suspendForSession()
-            hardLockdownSuspended = true
+            startActivity(Intent(Settings.ACTION_SETTINGS))
         }
         finishAndRemoveTask()
     }
@@ -393,8 +399,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private companion object {
-        /** Process-wide: Exit app suspends hard lockdown until the process restarts (e.g. reboot). */
-        var hardLockdownSuspended = false
 
         /** Side of the top-left square for the tablet's 5-tap secret entry. */
         const val SECRET_CORNER_DP = 80f

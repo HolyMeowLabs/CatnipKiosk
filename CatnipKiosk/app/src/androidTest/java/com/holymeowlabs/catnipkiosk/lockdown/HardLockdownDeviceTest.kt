@@ -70,6 +70,16 @@ class HardLockdownDeviceTest {
     }
 
     @Test
+    fun afterExitingReturningHomeLocksTheKioskAgain() = runBlocking {
+        scenario.onActivity { HardLockdown(DpmOps(it)).suspendForSession() }
+        assertThat(am.lockTaskModeState).isEqualTo(ActivityManager.LOCK_TASK_MODE_NONE)
+        device.pressHome()
+        assertThat(device.wait(Until.hasObject(By.pkg(context.packageName).depth(0)), 5_000)).isTrue()
+        delay(1_000)
+        assertThat(am.lockTaskModeState).isEqualTo(ActivityManager.LOCK_TASK_MODE_LOCKED)
+    }
+
+    @Test
     fun removalReleasesEverythingSoTheAppCanBeUninstalled() = runBlocking {
         scenario.onActivity { HardLockdown(DpmOps(it)).remove() }
         delay(500)

@@ -37,9 +37,10 @@ android {
     buildTypes {
         release {
             if (releaseKeystore != null) signingConfig = signingConfigs.getByName("release")
+            // Whole-app optimisation: the template's library-only packageScope crashed the release
+            // build at launch (IllegalAccessError between an app class and a kotlin.sequences class).
             optimization {
                 enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
         }
     }

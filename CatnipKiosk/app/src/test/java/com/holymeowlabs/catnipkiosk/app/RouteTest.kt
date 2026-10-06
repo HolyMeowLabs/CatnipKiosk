@@ -44,6 +44,24 @@ class RouteTest {
     }
 
     @Test
+    fun leavingTheAppEndsTheAdminSession() {
+        assertThat(routeAfterStop(Route.Settings)).isEqualTo(Route.Kiosk)
+        assertThat(routeAfterStop(Route.Pin)).isEqualTo(Route.Kiosk)
+        assertThat(routeAfterStop(Route.Setup)).isEqualTo(Route.Setup)
+        assertThat(routeAfterStop(Route.Kiosk)).isEqualTo(Route.Kiosk)
+    }
+
+    @Test
+    fun anIdleAdminSessionTimesOut() {
+        val last = 1_000_000L
+        assertThat(adminSessionExpired(Route.Settings, last, last + ADMIN_IDLE_MS - 1)).isFalse()
+        assertThat(adminSessionExpired(Route.Settings, last, last + ADMIN_IDLE_MS)).isTrue()
+        assertThat(adminSessionExpired(Route.Pin, last, last + ADMIN_IDLE_MS)).isTrue()
+        assertThat(adminSessionExpired(Route.Kiosk, last, last + ADMIN_IDLE_MS * 10)).isFalse()
+        assertThat(adminSessionExpired(Route.Setup, last, last + ADMIN_IDLE_MS * 10)).isFalse()
+    }
+
+    @Test
     fun missingSecurityIsNeverTreatedAsNoPin() {
         assertThat(launchRoute(settings, null)).isEqualTo(Route.Setup)
     }

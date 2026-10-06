@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.UiModeManager
 import android.content.res.Configuration
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.ViewGroup
@@ -33,7 +34,9 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.holymeowlabs.catnipkiosk.app.Route
+import com.holymeowlabs.catnipkiosk.app.adminSessionExpired
 import com.holymeowlabs.catnipkiosk.app.nextRoute
+import com.holymeowlabs.catnipkiosk.app.routeAfterStop
 import com.holymeowlabs.catnipkiosk.input.CornerTapDetector
 import com.holymeowlabs.catnipkiosk.input.KeyMapping
 import com.holymeowlabs.catnipkiosk.input.KeySequenceDetector
@@ -55,6 +58,7 @@ import com.holymeowlabs.catnipkiosk.ui.theme.KioskTheme
 import com.holymeowlabs.catnipkiosk.web.KioskWebView
 import com.holymeowlabs.catnipkiosk.web.WebEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -74,6 +78,7 @@ class MainActivity : ComponentActivity() {
         private set
     private var networkAvailable by mutableStateOf(true)
     private var webViewGeneration by mutableIntStateOf(0)
+    private var lastInputMs = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,6 +95,12 @@ class MainActivity : ComponentActivity() {
         val repo = SettingsRepository.get(this)
         lifecycleScope.launch { repo.settings.combine(repo.security, ::Pair).collect { (s, sec) -> onStored(s, sec) } }
         lifecycleScope.launch { vm.reloadRequests.collect { webView.loadStart() } }
+        lifecycleScope.launch {
+            while (true) {
+                delay(ADMIN_IDLE_CHECK_MS)
+                if (adminSessionExpired(route, lastInputMs, SystemClock.uptimeMillis())) route = Route.Kiosk
+            }
+        }
 
         setContent {
             KioskTheme {
@@ -141,6 +152,7 @@ class MainActivity : ComponentActivity() {
     // androidx.core's ComponentActivity marks its override of the public framework method @RestrictTo.
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        lastInputMs = event.eventTime
         if (event.action == KeyEvent.ACTION_DOWN && route == Route.Kiosk &&
             keySequence.onKey(KeyMapping.toDir(event.keyCode), event.eventTime)
         ) {
@@ -150,6 +162,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        lastInputMs = event.eventTime
         if (event.actionMasked == MotionEvent.ACTION_DOWN && route == Route.Kiosk &&
             cornerTaps.onTap(event.x, event.y, event.eventTime)
         ) {
@@ -161,6 +174,7 @@ class MainActivity : ComponentActivity() {
     private fun openPin() {
         val vmPin = pin ?: createPinViewModel() ?: return
         vmPin.reset()
+        lastInputMs = SystemClock.uptimeMillis()
         route = Route.Pin
     }
 
@@ -210,6 +224,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        route = routeAfterStop(route)
         connectivity.stop()
         super.onStop()
     }
@@ -264,6 +279,7 @@ class MainActivity : ComponentActivity() {
     private companion object {
         /** Side of the top-left square for the tablet's 5-tap secret entry. */
         const val SECRET_CORNER_DP = 80f
+        const val ADMIN_IDLE_CHECK_MS = 5_000L
     }
 
     private fun hideSystemBars() {

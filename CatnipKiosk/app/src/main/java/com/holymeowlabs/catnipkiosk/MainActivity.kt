@@ -60,6 +60,7 @@ import com.holymeowlabs.catnipkiosk.security.PinGate
 import com.holymeowlabs.catnipkiosk.security.PinHasher
 import com.holymeowlabs.catnipkiosk.lockdown.BootOption
 import com.holymeowlabs.catnipkiosk.lockdown.DpmOps
+import com.holymeowlabs.catnipkiosk.lockdown.ExitPlan
 import com.holymeowlabs.catnipkiosk.lockdown.HardLockdown
 import com.holymeowlabs.catnipkiosk.lockdown.HardLockdownStepsScreen
 import com.holymeowlabs.catnipkiosk.lockdown.HomeOption
@@ -351,12 +352,15 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * In hard lockdown, leaves lock task and opens system Settings for the admin; the kiosk stays
-     * the Home app, so returning Home brings it back and re-locks it (see onResume).
+     * When closing would only reopen the kiosk (hard lockdown, or it is the Home app), opens system
+     * Settings instead; in hard lockdown it leaves lock task first, and returning Home brings the
+     * kiosk back and re-locks it (see onResume).
      */
     private fun exitApp() {
-        if (LockdownController(this).tier() == LockdownTier.HARD) {
-            HardLockdown(DpmOps(this)).suspendForSession()
+        val lockdown = LockdownController(this)
+        val hard = lockdown.tier() == LockdownTier.HARD
+        if (ExitPlan.of(hard, lockdown.isHomeApp()) == ExitPlan.OPEN_SYSTEM_SETTINGS) {
+            if (hard) HardLockdown(DpmOps(this)).suspendForSession()
             startActivity(Intent(Settings.ACTION_SETTINGS))
         }
         finishAndRemoveTask()

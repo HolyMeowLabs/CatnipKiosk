@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hard lockdown uses device-owner APIs only; no legacy device-admin policies. -->
+<device-admin>
+    <uses-policies />
+</device-admin>

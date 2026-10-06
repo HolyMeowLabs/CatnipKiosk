@@ -38,6 +38,13 @@ To undo it, open settings with the secret gesture and your PIN, then choose **Re
 
 > **If you forget the PIN while hard lockdown is on, the only way out is a factory reset, which erases the device.**
 
+## Test builds
+
+Run **Build APKs** from the repository's Actions tab. Each run attaches APKs to download:
+
+- **Debug APK:** always built. Each run is signed with a new throwaway key, so uninstall the previous build before installing a newer one (this clears its settings).
+- **Release APK:** built only when these repository secrets are set: `CATNIP_KEYSTORE_BASE64` (the keystore file, base64-encoded), `CATNIP_KEYSTORE_PASSWORD`, `CATNIP_KEY_ALIAS` and `CATNIP_KEY_PASSWORD`. It is signed with your key, so newer builds install over older ones. Never commit the keystore.
+
 ## Privacy
 
 CatnipKiosk collects nothing. See the [privacy policy](docs/privacy.md).

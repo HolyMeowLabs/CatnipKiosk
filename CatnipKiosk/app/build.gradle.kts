@@ -67,5 +67,6 @@ dependencies {
     androidTestImplementation(libs.androidx.uiautomator)
     androidTestImplementation(libs.truth)
     androidTestImplementation(libs.mockwebserver)
+    androidTestImplementation(libs.okhttp.tls)
     androidTestImplementation(libs.kotlinx.coroutines.test)
 }

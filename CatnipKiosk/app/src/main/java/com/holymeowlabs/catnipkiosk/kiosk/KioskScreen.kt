@@ -14,7 +14,16 @@ import kotlinx.coroutines.flow.Flow
  * (it is kept while admin screens are open), so it is detached from any previous parent.
  */
 @Composable
-fun KioskScreen(webView: View, ui: KioskUi, networkAvailable: Boolean, toasts: Flow<Unit>, nowMs: () -> Long) {
+fun KioskScreen(
+    webView: View,
+    ui: KioskUi,
+    networkAvailable: Boolean,
+    toasts: Flow<Unit>,
+    nowMs: () -> Long,
+    coveredByAdmin: Boolean = false,
+) {
+    // Compose overlays don't stop touches or D-pad focus reaching the view beneath, so hide it.
+    val covered = coveredByAdmin || ui != KioskUi.Showing
     Box(Modifier.fillMaxSize()) {
         AndroidView(
             factory = {
@@ -26,12 +35,13 @@ fun KioskScreen(webView: View, ui: KioskUi, networkAvailable: Boolean, toasts: F
                 }
             },
             modifier = Modifier.fillMaxSize(),
+            update = { it.visibility = if (covered) View.INVISIBLE else View.VISIBLE },
         )
         when (ui) {
             KioskUi.Showing -> Unit
             is KioskUi.Reconnecting -> ReconnectingScreen(ui, networkAvailable, nowMs)
             is KioskUi.SetupProblem -> SetupProblemScreen(ui.blockedHost)
         }
-        BlockedToast(toasts)
+        if (!coveredByAdmin) BlockedToast(toasts)
     }
 }

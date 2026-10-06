@@ -20,6 +20,30 @@ class RouteTest {
     }
 
     @Test
+    fun firstStoreReadPicksTheLaunchRoute() {
+        assertThat(nextRoute(null, settings, security)).isEqualTo(Route.Kiosk)
+        assertThat(nextRoute(null, null, null)).isEqualTo(Route.Setup)
+    }
+
+    @Test
+    fun storeUpdatesDoNotPullTheAdminOutOfPinOrSettings() {
+        // Each PIN attempt saves SecurityState, which re-emits the store.
+        assertThat(nextRoute(Route.Pin, settings, security)).isEqualTo(Route.Pin)
+        assertThat(nextRoute(Route.Settings, settings, security)).isEqualTo(Route.Settings)
+    }
+
+    @Test
+    fun completingSetupMovesToTheKiosk() {
+        assertThat(nextRoute(Route.Setup, settings, security)).isEqualTo(Route.Kiosk)
+    }
+
+    @Test
+    fun losingTheConfigurationAlwaysGoesToSetup() {
+        assertThat(nextRoute(Route.Settings, null, security)).isEqualTo(Route.Setup)
+        assertThat(nextRoute(Route.Kiosk, settings, null)).isEqualTo(Route.Setup)
+    }
+
+    @Test
     fun missingSecurityIsNeverTreatedAsNoPin() {
         assertThat(launchRoute(settings, null)).isEqualTo(Route.Setup)
     }

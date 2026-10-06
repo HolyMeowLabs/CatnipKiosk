@@ -10,4 +10,15 @@
     <string name="setup_problem_title">This screen needs attention</string>
     <string name="setup_problem_body">This page sends viewers to %1$s, which isn\'t allowed. Add it under Settings › Navigation.</string>
     <string name="setup_pending">Setup isn\'t available yet.</string>
+    <string name="settings_pending">Settings aren\'t available yet. Press Back to return.</string>
+    <string name="pin_title">Enter admin PIN</string>
+    <string name="pin_cancel">Cancel</string>
+    <string name="pin_delete">Delete</string>
+    <string name="pin_ok">OK</string>
+    <string name="pin_wrong">Wrong PIN.</string>
+    <plurals name="pin_wrong_attempts">
+        <item quantity="one">Wrong PIN. %1$d attempt left before a 1-minute lock.</item>
+        <item quantity="other">Wrong PIN. %1$d attempts left before a 1-minute lock.</item>
+    </plurals>
+    <string name="pin_locked">Too many attempts. Try again in %1$d s.</string>
 </resources>

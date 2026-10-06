@@ -1,11 +1,15 @@
 package com.holymeowlabs.catnipkiosk
 
+import android.annotation.SuppressLint
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.CookieManager
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -26,7 +30,14 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.holymeowlabs.catnipkiosk.app.Route
-import com.holymeowlabs.catnipkiosk.app.launchRoute
+import com.holymeowlabs.catnipkiosk.app.nextRoute
+import com.holymeowlabs.catnipkiosk.input.CornerTapDetector
+import com.holymeowlabs.catnipkiosk.input.KeyMapping
+import com.holymeowlabs.catnipkiosk.input.KeySequenceDetector
+import com.holymeowlabs.catnipkiosk.pin.PinScreen
+import com.holymeowlabs.catnipkiosk.pin.PinViewModel
+import com.holymeowlabs.catnipkiosk.security.PinGate
+import com.holymeowlabs.catnipkiosk.security.PinHasher
 import com.holymeowlabs.catnipkiosk.kiosk.Connectivity
 import com.holymeowlabs.catnipkiosk.kiosk.KioskScreen
 import com.holymeowlabs.catnipkiosk.kiosk.KioskViewModel
@@ -36,6 +47,8 @@ import com.holymeowlabs.catnipkiosk.settings.SettingsRepository
 import com.holymeowlabs.catnipkiosk.ui.theme.KioskTheme
 import com.holymeowlabs.catnipkiosk.web.KioskWebView
 import com.holymeowlabs.catnipkiosk.web.WebEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -47,7 +60,13 @@ class MainActivity : ComponentActivity() {
     private val vm by lazy { KioskViewModel(System::currentTimeMillis, lifecycleScope) }
     private lateinit var connectivity: Connectivity
     private var kioskSettings: KioskSettings? = null
-    private var route by mutableStateOf<Route?>(null)
+    private var security: SecurityState? = null
+    private val keySequence = KeySequenceDetector()
+    private val cornerTaps by lazy { CornerTapDetector(zoneSizePx = SECRET_CORNER_DP * resources.displayMetrics.density) }
+    private var pin by mutableStateOf<PinViewModel?>(null)
+    private var pinJobs: Job? = null
+    internal var route by mutableStateOf<Route?>(null)
+        private set
     private var networkAvailable by mutableStateOf(true)
     private var webViewGeneration by mutableIntStateOf(0)
 
@@ -71,17 +90,73 @@ class MainActivity : ComponentActivity() {
             KioskTheme {
                 val ui by vm.ui.collectAsState()
                 Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                    when (route) {
-                        Route.Kiosk -> key(webViewGeneration) {
-                            KioskScreen(webView, ui, networkAvailable, vm.toast, System::currentTimeMillis)
+                    val current = route
+                    // The page stays composed under the admin screens so opening them doesn't reload it.
+                    if (current == Route.Kiosk || current == Route.Pin || current == Route.Settings) {
+                        key(webViewGeneration) {
+                            KioskScreen(
+                                webView, ui, networkAvailable, vm.toast, System::currentTimeMillis,
+                                coveredByAdmin = current != Route.Kiosk,
+                            )
                         }
-                        // Setup (Task 10) and the admin screens (Tasks 9, 11) are not built yet.
+                    }
+                    when (current) {
+                        Route.Pin -> pin?.let { p ->
+                            val state by p.state.collectAsState()
+                            PinScreen(state, System::currentTimeMillis, p::digit, p::delete, p::ok, p::cancel)
+                        }
+                        // Settings (Task 11) and Setup (Task 10) are not built yet.
+                        Route.Settings -> {
+                            BackHandler { route = Route.Kiosk }
+                            Text(stringResource(R.string.settings_pending), Modifier.align(Alignment.Center))
+                        }
                         Route.Setup -> Text(stringResource(R.string.setup_pending), Modifier.align(Alignment.Center))
                         else -> Unit
                     }
                 }
             }
         }
+    }
+
+    /** Secret entry observes keys and touches but never consumes them; the page still gets every event. */
+    // androidx.core's ComponentActivity marks its override of the public framework method @RestrictTo.
+    @SuppressLint("RestrictedApi")
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && route == Route.Kiosk &&
+            keySequence.onKey(KeyMapping.toDir(event.keyCode), event.eventTime)
+        ) {
+            openPin()
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && route == Route.Kiosk &&
+            cornerTaps.onTap(event.x, event.y, event.eventTime)
+        ) {
+            openPin()
+        }
+        return super.dispatchTouchEvent(event)
+    }
+
+    private fun openPin() {
+        val stored = security ?: return
+        val vmPin = PinViewModel(
+            initial = stored,
+            lockoutEnabled = kioskSettings?.pinLockoutEnabled == true,
+            gate = PinGate(PinHasher(), System::currentTimeMillis),
+            save = SettingsRepository.get(this)::saveSecurity,
+            scope = lifecycleScope,
+            nowMs = System::currentTimeMillis,
+            work = Dispatchers.Default,
+        )
+        pinJobs?.cancel()
+        pinJobs = lifecycleScope.launch {
+            launch { vmPin.unlocked.collect { route = Route.Settings } }
+            launch { vmPin.cancelled.collect { route = Route.Kiosk } }
+        }
+        pin = vmPin
+        route = Route.Pin
     }
 
     override fun onStart() {
@@ -104,11 +179,12 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    private fun onStored(stored: KioskSettings?, security: SecurityState?) {
+    private fun onStored(stored: KioskSettings?, storedSecurity: SecurityState?) {
         val previous = kioskSettings
         kioskSettings = stored
-        route = launchRoute(stored, security)
-        if (stored == null || route != Route.Kiosk) return
+        security = storedSecurity
+        route = nextRoute(route, stored, storedSecurity)
+        if (stored == null || route == Route.Setup) return
 
         if (stored.keepScreenOn) {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -137,6 +213,11 @@ class MainActivity : ComponentActivity() {
         dead.destroy()
         webView = newWebView()
         webViewGeneration++
+    }
+
+    private companion object {
+        /** Side of the top-left square for the tablet's 5-tap secret entry. */
+        const val SECRET_CORNER_DP = 80f
     }
 
     private fun hideSystemBars() {

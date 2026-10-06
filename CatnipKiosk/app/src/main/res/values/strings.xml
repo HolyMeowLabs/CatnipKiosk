@@ -10,6 +10,9 @@
     <string name="setup_problem_title">This screen needs attention</string>
     <string name="setup_problem_body">This page sends viewers to %1$s, which isn\'t allowed. Add it under Settings › Navigation.</string>
     <string name="setup_problem_same_site">This page sends viewers to another page on the same site, and Navigation is set to \"This page only\". Choose \"The whole site\" under Settings › Navigation, or set the start page to the address it goes to.</string>
+    <string name="scheme_https">https (secure)</string>
+    <string name="scheme_http">http</string>
+    <string name="http_warning">http pages aren\'t encrypted. That\'s fine for a dashboard on your own network, but avoid it on public networks.</string>
     <string name="setup_title">Set up this screen</string>
     <string name="setup_step">Step %1$d of 3 · %2$s</string>
     <string name="setup_step_start_page">Start page</string>

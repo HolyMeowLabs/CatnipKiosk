@@ -35,6 +35,9 @@ data class SetupUi(
     val pinConfirm: String = "",
     val pinError: PinEntryError? = null,
     val saving: Boolean = false,
+    val scheme: Scheme = Scheme.HTTPS,
+    /** The start URL is plain http; shown as a warning. */
+    val insecure: Boolean = false,
 )
 
 /** First-run wizard: start page → navigation → PIN. Nothing is saved until the PIN step passes. */
@@ -56,8 +59,26 @@ class SetupViewModel(
     private var startUrl: String? = null
 
     fun setUrl(text: String) {
-        startUrl = (StartUrlInput.normalize(text) as? StartUrlInput.Result.Ok)?.url
-        _state.update { it.copy(url = text, urlError = false, allowedDomain = startUrl?.let { u -> URI(u).host }) }
+        val typed = StartUrlInput.typedScheme(text)
+        _state.update { it.copy(url = text, urlError = false, scheme = typed ?: it.scheme) }
+        refreshStartUrl()
+    }
+
+    /** http or https for an address typed without one; a typed scheme overrides it. */
+    fun setScheme(scheme: Scheme) {
+        _state.update { it.copy(scheme = scheme) }
+        refreshStartUrl()
+    }
+
+    private fun refreshStartUrl() {
+        val ui = _state.value
+        startUrl = (StartUrlInput.normalize(ui.url, ui.scheme) as? StartUrlInput.Result.Ok)?.url
+        _state.update {
+            it.copy(
+                allowedDomain = startUrl?.let { u -> URI(u).host },
+                insecure = startUrl?.startsWith("http://") == true,
+            )
+        }
     }
 
     fun setNavMode(mode: NavMode) = _state.update { it.copy(navMode = mode) }

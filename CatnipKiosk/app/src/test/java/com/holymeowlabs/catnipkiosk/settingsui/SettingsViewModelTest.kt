@@ -5,6 +5,7 @@ import com.holymeowlabs.catnipkiosk.security.PinHasher
 import com.holymeowlabs.catnipkiosk.settings.KioskSettings
 import com.holymeowlabs.catnipkiosk.settings.ScheduledReload
 import com.holymeowlabs.catnipkiosk.settings.SecurityState
+import com.holymeowlabs.catnipkiosk.setup.Scheme
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -76,6 +77,13 @@ class SettingsViewModelTest {
         assertThat(h.vm.settings.value.startUrl).isEqualTo("https://example.com/")
         assertThat(h.vm.setStartUrl("Dashboard.Example.com/lobby")).isTrue()
         assertThat(h.vm.settings.value.startUrl).isEqualTo("https://dashboard.example.com/lobby")
+    }
+
+    @Test
+    fun startUrlUsesTheChosenScheme() = runTest {
+        val h = Harness(this)
+        assertThat(h.vm.setStartUrl("10.0.0.5:8123", Scheme.HTTP)).isTrue()
+        assertThat(h.vm.settings.value.startUrl).isEqualTo("http://10.0.0.5:8123/")
     }
 
     @Test

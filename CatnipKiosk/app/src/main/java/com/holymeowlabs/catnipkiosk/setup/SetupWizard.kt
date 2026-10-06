@@ -66,6 +66,7 @@ private fun StepHeader(number: Int, title: Int) {
 @Composable
 private fun StartUrlStep(vm: SetupViewModel, state: SetupUi) {
     StepHeader(1, R.string.setup_step_start_page)
+    SchemeChoice(state.scheme, vm::setScheme)
     OutlinedTextField(
         value = state.url,
         onValueChange = vm::setUrl,
@@ -79,6 +80,7 @@ private fun StartUrlStep(vm: SetupViewModel, state: SetupUi) {
         state.allowedDomain != null -> Text(stringResource(R.string.setup_allowed_domain, state.allowedDomain))
         state.urlError -> Text(stringResource(R.string.setup_url_error), color = MaterialTheme.colorScheme.error)
     }
+    if (state.insecure) HttpWarning()
     Button(onClick = vm::next, modifier = Modifier.testTag("setup_next")) { Text(stringResource(R.string.setup_next)) }
 }
 

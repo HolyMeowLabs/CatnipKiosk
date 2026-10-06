@@ -5,6 +5,7 @@ import com.holymeowlabs.catnipkiosk.security.PinRules
 import com.holymeowlabs.catnipkiosk.settings.DomainInput
 import com.holymeowlabs.catnipkiosk.settings.KioskSettings
 import com.holymeowlabs.catnipkiosk.settings.SecurityState
+import com.holymeowlabs.catnipkiosk.setup.Scheme
 import com.holymeowlabs.catnipkiosk.setup.StartUrlInput
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineDispatcher
@@ -58,8 +59,8 @@ class SettingsViewModel(
 
     fun removeExtraDomain(host: String) = update { it.copy(extraDomains = it.extraDomains - host) }
 
-    fun setStartUrl(input: String): Boolean {
-        val url = (StartUrlInput.normalize(input) as? StartUrlInput.Result.Ok)?.url ?: return false
+    fun setStartUrl(input: String, scheme: Scheme = Scheme.HTTPS): Boolean {
+        val url = (StartUrlInput.normalize(input, scheme) as? StartUrlInput.Result.Ok)?.url ?: return false
         update { it.copy(startUrl = url) }
         return true
     }

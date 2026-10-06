@@ -117,6 +117,35 @@ class SetupViewModelTest {
     }
 
     @Test
+    fun httpsIsPreselectedWithoutAWarning() = runTest {
+        val h = Harness(this)
+        h.vm.setUrl("example.com")
+        assertThat(h.vm.state.value.scheme).isEqualTo(Scheme.HTTPS)
+        assertThat(h.vm.state.value.insecure).isFalse()
+    }
+
+    @Test
+    fun choosingHttpIsUsedAndWarnedAbout() = runTest {
+        val h = Harness(this)
+        h.vm.setScheme(Scheme.HTTP)
+        h.vm.setUrl("192.168.1.20:8123")
+        assertThat(h.vm.state.value.insecure).isTrue()
+        h.vm.next(); h.vm.next()
+        h.vm.setPin("2468"); h.vm.setPinConfirm("2468")
+        h.vm.finish(); runCurrent()
+        assertThat(h.settings.single().startUrl).isEqualTo("http://192.168.1.20:8123/")
+    }
+
+    @Test
+    fun aTypedSchemeUpdatesTheChoice() = runTest {
+        val h = Harness(this)
+        h.vm.setScheme(Scheme.HTTP)
+        h.vm.setUrl("https://example.com")
+        assertThat(h.vm.state.value.scheme).isEqualTo(Scheme.HTTPS)
+        assertThat(h.vm.state.value.insecure).isFalse()
+    }
+
+    @Test
     fun backReturnsToThePreviousStep() = runTest {
         val h = Harness(this)
         h.toPinStep()

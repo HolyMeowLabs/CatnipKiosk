@@ -40,6 +40,20 @@ class StartUrlInputTest {
     }
 
     @Test
+    fun chosenSchemeAppliesWhenNoneIsTyped() {
+        assertThat(StartUrlInput.normalize("192.168.1.20:8123", Scheme.HTTP)).isEqualTo(Ok("http://192.168.1.20:8123/"))
+        assertThat(StartUrlInput.normalize("192.168.1.20:8123", Scheme.HTTPS)).isEqualTo(Ok("https://192.168.1.20:8123/"))
+    }
+
+    @Test
+    fun aTypedSchemeWinsOverTheChoice() {
+        assertThat(StartUrlInput.normalize("https://example.com/", Scheme.HTTP)).isEqualTo(Ok("https://example.com/"))
+        assertThat(StartUrlInput.typedScheme(" HTTP://example.com")).isEqualTo(Scheme.HTTP)
+        assertThat(StartUrlInput.typedScheme("https://example.com")).isEqualTo(Scheme.HTTPS)
+        assertThat(StartUrlInput.typedScheme("example.com")).isNull()
+    }
+
+    @Test
     fun unusableInputIsRejected() {
         listOf(
             "",

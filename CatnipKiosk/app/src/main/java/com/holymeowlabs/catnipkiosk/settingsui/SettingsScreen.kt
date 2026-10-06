@@ -50,6 +50,10 @@ import com.holymeowlabs.catnipkiosk.lockdown.HomeOption
 import com.holymeowlabs.catnipkiosk.settings.KioskSettings
 import com.holymeowlabs.catnipkiosk.settings.NavMode
 import com.holymeowlabs.catnipkiosk.settings.ScheduledReload
+import com.holymeowlabs.catnipkiosk.setup.HttpWarning
+import com.holymeowlabs.catnipkiosk.setup.Scheme
+import com.holymeowlabs.catnipkiosk.setup.SchemeChoice
+import com.holymeowlabs.catnipkiosk.setup.StartUrlInput
 
 enum class SettingsSection(val title: Int) {
     StartPage(R.string.settings_section_start_page),
@@ -156,10 +160,18 @@ private fun ColumnScope.Section(
     when (section) {
         SettingsSection.StartPage -> {
             var url by remember(s.startUrl) { mutableStateOf(s.startUrl) }
+            var scheme by remember(s.startUrl) {
+                mutableStateOf(StartUrlInput.typedScheme(s.startUrl) ?: Scheme.HTTPS)
+            }
             var invalid by remember { mutableStateOf(false) }
+            SchemeChoice(scheme) { scheme = it }
             OutlinedTextField(
                 value = url,
-                onValueChange = { url = it; invalid = false },
+                onValueChange = { text ->
+                    url = text
+                    invalid = false
+                    StartUrlInput.typedScheme(text)?.let { scheme = it }
+                },
                 label = { Text(stringResource(R.string.setup_url_label)) },
                 singleLine = true,
                 isError = invalid,
@@ -167,8 +179,9 @@ private fun ColumnScope.Section(
                 modifier = Modifier.dpadExitsTextField().fillMaxWidth(),
             )
             if (invalid) Text(stringResource(R.string.setup_url_error), color = MaterialTheme.colorScheme.error)
+            if (scheme == Scheme.HTTP) HttpWarning()
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { invalid = !vm.setStartUrl(url) }) { Text(stringResource(R.string.settings_save)) }
+                Button(onClick = { invalid = !vm.setStartUrl(url, scheme) }) { Text(stringResource(R.string.settings_save)) }
                 OutlinedButton(onClick = onReloadNow) { Text(stringResource(R.string.settings_reload_now)) }
             }
         }

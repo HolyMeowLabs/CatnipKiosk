@@ -8,8 +8,18 @@ import java.net.URI
 import java.net.URISyntaxException
 import java.util.Locale
 
+enum class Scheme { HTTP, HTTPS }
+
 /** Turns what an admin types as the start page into a canonical http(s) URL. */
 object StartUrlInput {
+    /** The scheme the admin typed, if any; the UI's http/https choice follows it. */
+    fun typedScheme(input: String): Scheme? =
+        when (schemeWithSlashes.find(input.trim())?.groupValues?.get(1)?.lowercase(Locale.ROOT)) {
+            "http" -> Scheme.HTTP
+            "https" -> Scheme.HTTPS
+            else -> null
+        }
+
     sealed interface Result {
         data class Ok(val url: String) : Result
         data object Invalid : Result
@@ -20,7 +30,7 @@ object StartUrlInput {
     /** "javascript:", "mailto:" and the like; "localhost:8123" is a host and port instead. */
     private val opaqueScheme = Regex("^[A-Za-z][A-Za-z0-9+.-]*:(?![0-9])")
 
-    fun normalize(input: String): Result {
+    fun normalize(input: String, defaultScheme: Scheme = Scheme.HTTPS): Result {
         val text = input.trim()
         if (text.isEmpty()) return Result.Invalid
 
@@ -32,7 +42,7 @@ object StartUrlInput {
             rest = text.substring(match.range.last + 1)
         } else {
             if (opaqueScheme.containsMatchIn(text)) return Result.Invalid
-            scheme = "https"
+            scheme = defaultScheme.name.lowercase(Locale.ROOT)
             rest = text
         }
         if (scheme != "http" && scheme != "https") return Result.Invalid

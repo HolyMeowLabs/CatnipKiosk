@@ -15,6 +15,7 @@ import android.webkit.WebChromeClient
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.BackHandler
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -55,7 +56,9 @@ import com.holymeowlabs.catnipkiosk.pin.PinScreen
 import com.holymeowlabs.catnipkiosk.pin.PinViewModel
 import com.holymeowlabs.catnipkiosk.security.PinGate
 import com.holymeowlabs.catnipkiosk.security.PinHasher
+import com.holymeowlabs.catnipkiosk.lockdown.LockdownController
 import com.holymeowlabs.catnipkiosk.settingsui.SettingsScreen
+import com.holymeowlabs.catnipkiosk.settingsui.StartupStatus
 import com.holymeowlabs.catnipkiosk.settingsui.SettingsViewModel
 import com.holymeowlabs.catnipkiosk.setup.SetupViewModel
 import com.holymeowlabs.catnipkiosk.setup.SetupWizard
@@ -90,6 +93,8 @@ class MainActivity : ComponentActivity() {
     private var networkAvailable by mutableStateOf(true)
     private var webViewGeneration by mutableIntStateOf(0)
     private var lastInputMs = 0L
+    private var lockdownRefresh by mutableIntStateOf(0)
+    private val homeRoleRequest = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { lockdownRefresh++ }
     private var cursorEnabled by mutableStateOf(false)
     private var cursor: CursorController? = null
     private var cursorPosition by mutableStateOf<Offset?>(null)
@@ -161,6 +166,13 @@ class MainActivity : ComponentActivity() {
                                 onReloadNow = {
                                     webView.loadStart()
                                     route = Route.Kiosk
+                                },
+                                startup = remember(lockdownRefresh) {
+                                    val lockdown = LockdownController(this@MainActivity)
+                                    StartupStatus(lockdown.isHomeApp(), lockdown.homeRoleRequestIntent() != null)
+                                },
+                                onSetHome = {
+                                    LockdownController(this@MainActivity).homeRoleRequestIntent()?.let(homeRoleRequest::launch)
                                 },
                             )
                         }
@@ -292,6 +304,11 @@ class MainActivity : ComponentActivity() {
         route = routeAfterStop(route)
         connectivity.stop()
         super.onStop()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        lockdownRefresh++
     }
 
     override fun onPause() {

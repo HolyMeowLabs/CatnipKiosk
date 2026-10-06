@@ -59,7 +59,10 @@
     <string name="settings_start_on_boot">Start when the device turns on</string>
     <string name="settings_set_home">Set as Home app</string>
     <string name="settings_hard_lockdown">Hard lockdown setup</string>
-    <string name="settings_lockdown_pending">Lockdown options are coming in a later update.</string>
+    <string name="settings_lockdown_pending">Hard lockdown is coming in a later update.</string>
+    <string name="settings_is_home">CatnipKiosk is the Home app. Pressing Home returns here, and the device starts into the kiosk.</string>
+    <string name="settings_not_home_limitation">While CatnipKiosk isn\'t the Home app, pressing Home leaves the kiosk, and Android won\'t let it bring itself back or start by itself after a restart.</string>
+    <string name="settings_home_unavailable">This device doesn\'t let you choose a Home app here, so pressing Home leaves the kiosk and it won\'t start by itself after a restart. From a computer with adb you can run: adb shell cmd package set-home-activity com.holymeowlabs.catnipkiosk/.MainActivity</string>
     <string name="settings_change_pin">Change PIN</string>
     <string name="settings_pin_current">Current PIN</string>
     <string name="settings_pin_new">New PIN</string>

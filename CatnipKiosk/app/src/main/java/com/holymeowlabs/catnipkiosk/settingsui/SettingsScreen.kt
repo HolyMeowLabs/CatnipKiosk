@@ -57,6 +57,9 @@ enum class SettingsSection(val title: Int) {
     Security(R.string.settings_section_security),
 }
 
+/** What Settings shows about soft lockdown; refreshed whenever the screen resumes. */
+data class StartupStatus(val isHomeApp: Boolean = false, val canRequestHome: Boolean = false)
+
 /** TV: a focusable side rail with one section at a time. Tablet: every section in one scroll. */
 @Composable
 fun SettingsScreen(
@@ -65,6 +68,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onExitApp: () -> Unit,
     onReloadNow: () -> Unit,
+    startup: StartupStatus = StartupStatus(),
+    onSetHome: () -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
     val settings by vm.settings.collectAsState()
@@ -77,7 +82,7 @@ fun SettingsScreen(
             Button(onClick = onBack, modifier = Modifier.padding(start = 12.dp)) { Text(stringResource(R.string.settings_back_to_kiosk)) }
         }
         val sectionContent: @Composable ColumnScope.(SettingsSection) -> Unit = { section ->
-            Section(section, vm, settings, onReloadNow) { changingPin = true }
+            Section(section, vm, settings, onReloadNow, startup, onSetHome) { changingPin = true }
         }
         if (isTv) {
             var selected by rememberSaveable { mutableStateOf(SettingsSection.StartPage) }
@@ -119,6 +124,8 @@ private fun ColumnScope.Section(
     vm: SettingsViewModel,
     s: KioskSettings,
     onReloadNow: () -> Unit,
+    startup: StartupStatus,
+    onSetHome: () -> Unit,
     onChangePin: () -> Unit,
 ) {
     when (section) {
@@ -230,10 +237,18 @@ private fun ColumnScope.Section(
         }
         SettingsSection.Startup -> {
             Toggle(R.string.settings_start_on_boot, s.startOnBoot) { on -> vm.update { it.copy(startOnBoot = on) } }
-            // Lockdown tiers are wired in Tasks 14 (soft) and 15 (hard).
-            OutlinedButton(onClick = {}, enabled = false) { Text(stringResource(R.string.settings_set_home)) }
+            val muted = MaterialTheme.colorScheme.onSurfaceVariant
+            when {
+                startup.isHomeApp -> Text(stringResource(R.string.settings_is_home))
+                startup.canRequestHome -> {
+                    Button(onClick = onSetHome) { Text(stringResource(R.string.settings_set_home)) }
+                    Text(stringResource(R.string.settings_not_home_limitation), color = muted)
+                }
+                else -> Text(stringResource(R.string.settings_home_unavailable), color = muted)
+            }
+            // Hard lockdown is wired in Task 15.
             OutlinedButton(onClick = {}, enabled = false) { Text(stringResource(R.string.settings_hard_lockdown)) }
-            Text(stringResource(R.string.settings_lockdown_pending), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.settings_lockdown_pending), color = muted)
         }
         SettingsSection.Security -> {
             Button(onClick = onChangePin) { Text(stringResource(R.string.settings_change_pin)) }

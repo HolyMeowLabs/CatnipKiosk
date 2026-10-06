@@ -62,7 +62,7 @@
     <string name="settings_hard_off">Hard lockdown (tablets) blocks Home, Recents and notifications. It needs a one-time setup from a computer.</string>
     <string name="settings_hard_show_steps">Show setup steps</string>
     <string name="settings_hard_remove">Remove hard lockdown</string>
-    <string name="settings_hard_remove_confirm">Remove hard lockdown? The device returns to normal and CatnipKiosk can be uninstalled.</string>
+    <string name="settings_hard_remove_confirm">Remove hard lockdown? Home, Recents and notifications work again and CatnipKiosk can be uninstalled. It stays the Home app until you pick another under Android Settings › Apps › Default apps, or uninstall it.</string>
     <string name="settings_hard_remove_yes">Remove</string>
     <string name="hard_title">Hard lockdown setup</string>
     <string name="hard_what">Hard lockdown makes CatnipKiosk the device owner, so people can\'t leave the kiosk with Home, Recents or notifications.</string>

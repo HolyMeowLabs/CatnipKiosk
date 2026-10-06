@@ -56,7 +56,12 @@ class HardLockdownDeviceTest {
 
     @After
     fun tearDown() = runBlocking {
-        if (dpm.isDeviceOwnerApp(context.packageName)) scenario.onActivity { HardLockdown(DpmOps(it)).remove() }
+        // Pressing Home may replace the original instance, so remove through a fresh one if needed.
+        if (dpm.isDeviceOwnerApp(context.packageName)) {
+            ActivityScenario.launch(MainActivity::class.java).use { fresh ->
+                fresh.onActivity { HardLockdown(DpmOps(it)).remove() }
+            }
+        }
         scenario.close()
         SettingsRepository.get(context).clearAll()
     }
@@ -80,12 +85,14 @@ class HardLockdownDeviceTest {
     }
 
     @Test
-    fun removalReleasesEverythingSoTheAppCanBeUninstalled() = runBlocking {
+    fun removalReleasesEverythingSoTheAppCanBeUninstalled() = runBlocking<Unit> {
         scenario.onActivity { HardLockdown(DpmOps(it)).remove() }
         delay(500)
         assertThat(LockdownController(context).tier()).isEqualTo(LockdownTier.SOFT)
         assertThat(am.lockTaskModeState).isEqualTo(ActivityManager.LOCK_TASK_MODE_NONE)
         assertThat(dpm.isDeviceOwnerApp(context.packageName)).isFalse()
         assertThat(dpm.isAdminActive(KioskDeviceAdminReceiver.component(context))).isFalse()
+        // Android leaves CatnipKiosk holding the Home role after the persistent preference is cleared;
+        // the confirmation text says so. Uninstalling restores the previous launcher.
     }
 }

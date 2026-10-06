@@ -14,7 +14,7 @@ object DomainInput {
      * usable host, including hosts java.net.URI cannot parse (NavigationPolicy would never
      * match them).
      */
-    fun normalize(input: String): String? {
+    fun normalize(input: String, allowSingleLabel: Boolean = false): String? {
         var s = input.trim()
         // Only a scheme at the very start counts; "://" inside a query or fragment does not.
         if (Regex("^[A-Za-z][A-Za-z0-9+.-]*://").containsMatchIn(s)) s = s.substringAfter("://")
@@ -27,7 +27,9 @@ object DomainInput {
         } catch (e: IllegalArgumentException) {
             return null
         }
-        if (ascii.isEmpty() || (ascii != "localhost" && '.' !in ascii)) return null
+        // Extra domains need a dot: "com" (or "*.com") would allow every .com site, since extra
+        // domains include their subdomains. A start page may be a LAN name like "nas".
+        if (ascii.isEmpty() || (!allowSingleLabel && ascii != "localhost" && '.' !in ascii)) return null
 
         val parsedHost = try {
             URI("https", ascii, "/", null).host

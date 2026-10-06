@@ -9,7 +9,7 @@ class KioskSettingsSerializationTest {
         startUrl = "https://example.com/lobby",
         navMode = NavMode.PAGE_ONLY,
         includeSubdomains = false,
-        extraDomains = listOf("login.example-sso.com", "cdn.example.net"),
+        extraDomains = listOf("login.example.org", "cdn.example.net"),
         showBlockedMessage = false,
         zoomPercent = 150,
         cursorEnabled = true,

@@ -20,9 +20,9 @@ class DomainInputTest {
 
     @Test
     fun aUrlInsideTheQueryOrFragmentIsNotMistakenForTheHost() = check(
-        "example.com/login?next=https://evil.com/x" to "example.com",
-        "example.com#https://other.org" to "example.com",
-        "https://example.com/?u=http://evil.com" to "example.com",
+        "example.com/login?next=https://evil.example/x" to "example.com",
+        "example.com#https://other.example" to "example.com",
+        "https://example.com/?u=http://evil.example" to "example.com",
     )
 
     @Test

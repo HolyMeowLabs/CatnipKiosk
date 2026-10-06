@@ -7,9 +7,11 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.CookieManager
+import android.webkit.WebChromeClient
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.BackHandler
@@ -30,6 +32,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -90,6 +94,8 @@ class MainActivity : ComponentActivity() {
     private var cursor: CursorController? = null
     private var cursorPosition by mutableStateOf<Offset?>(null)
     private var cursorMovedMs by mutableLongStateOf(0L)
+    private var fullScreen by mutableStateOf<Pair<View, WebChromeClient.CustomViewCallback>?>(null)
+    internal val isShowingFullScreen get() = fullScreen != null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -128,8 +134,16 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     val position = cursorPosition
-                    if (current == Route.Kiosk && cursorEnabled && ui == KioskUi.Showing && position != null) {
+                    if (current == Route.Kiosk && cursorEnabled && ui == KioskUi.Showing && fullScreen == null && position != null) {
                         CursorOverlay(position, cursorMovedMs)
+                    }
+                    fullScreen?.let { (view, callback) ->
+                        // Back leaves full screen rather than navigating the page.
+                        BackHandler { callback.onCustomViewHidden(); fullScreen = null }
+                        AndroidView(
+                            factory = { view.also { (it.parent as? ViewGroup)?.removeView(it) } },
+                            modifier = Modifier.fillMaxSize().background(Color.Black),
+                        )
                     }
                     when (current) {
                         Route.Pin -> pin?.let { p ->
@@ -174,7 +188,7 @@ class MainActivity : ComponentActivity() {
         ) {
             openPin()
         }
-        val cursorActive = route == Route.Kiosk && cursorEnabled && vm.ui.value == KioskUi.Showing &&
+        val cursorActive = route == Route.Kiosk && cursorEnabled && vm.ui.value == KioskUi.Showing && fullScreen == null &&
             webView.width > 0 && webView.height > 0
         return when (val action = CursorKeys.decide(event.keyCode, event.action, cursorActive)) {
             CursorKeys.Action.PassThrough -> super.dispatchKeyEvent(event)
@@ -307,9 +321,12 @@ class MainActivity : ComponentActivity() {
         }
         if (previous?.scheduledReload != stored.scheduledReload) vm.onSettingsChanged(stored)
         // The repository flow is distinct, but only navigation fields warrant a reload.
-        if (previous == null || previous.navigationFields() != stored.navigationFields()) webView.loadStart()
+        val zoomChanged = previous?.zoomPercent != stored.zoomPercent
+        if (zoomChanged) webView.applyZoom(stored.zoomPercent)
+        if (previous == null || zoomChanged || previous.navigationFields() != stored.navigationFields()) webView.loadStart()
     }
 
+    /** Zoom (initial scale) also needs a reload, handled separately. */
     private fun KioskSettings.navigationFields() = listOf(startUrl, navMode, includeSubdomains, extraDomains)
 
     private fun newWebView() = KioskWebView(this).apply {
@@ -318,6 +335,9 @@ class MainActivity : ComponentActivity() {
             if (event == WebEvent.RendererGone) replaceWebView()
             kioskSettings?.let { vm.onWebEvent(event, it) }
         }
+        onShowCustomView = { view, callback -> fullScreen = view to callback }
+        onHideCustomView = { fullScreen = null }
+        kioskSettings?.let { applyZoom(it.zoomPercent) }
     }
 
     /** The renderer died: this view is unusable. The view model then requests a reload. */

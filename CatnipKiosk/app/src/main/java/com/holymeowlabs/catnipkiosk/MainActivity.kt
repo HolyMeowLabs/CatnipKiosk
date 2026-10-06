@@ -41,6 +41,8 @@ import com.holymeowlabs.catnipkiosk.pin.PinScreen
 import com.holymeowlabs.catnipkiosk.pin.PinViewModel
 import com.holymeowlabs.catnipkiosk.security.PinGate
 import com.holymeowlabs.catnipkiosk.security.PinHasher
+import com.holymeowlabs.catnipkiosk.settingsui.SettingsScreen
+import com.holymeowlabs.catnipkiosk.settingsui.SettingsViewModel
 import com.holymeowlabs.catnipkiosk.setup.SetupViewModel
 import com.holymeowlabs.catnipkiosk.setup.SetupWizard
 import com.holymeowlabs.catnipkiosk.kiosk.Connectivity
@@ -108,10 +110,19 @@ class MainActivity : ComponentActivity() {
                             val state by p.state.collectAsState()
                             PinScreen(state, System::currentTimeMillis, p::digit, p::delete, p::ok, p::cancel)
                         }
-                        // Settings (Task 11) and Setup (Task 10) are not built yet.
-                        Route.Settings -> {
-                            BackHandler { route = Route.Kiosk }
-                            Text(stringResource(R.string.settings_pending), Modifier.align(Alignment.Center))
+                        Route.Settings -> kioskSettings?.let { current ->
+                            // A fresh view model per visit, seeded from the stored settings.
+                            val settingsVm = remember { newSettingsViewModel(current) }
+                            SettingsScreen(
+                                vm = settingsVm,
+                                isTv = isTv,
+                                onBack = { route = Route.Kiosk },
+                                onExitApp = ::finishAndRemoveTask,
+                                onReloadNow = {
+                                    webView.loadStart()
+                                    route = Route.Kiosk
+                                },
+                            )
                         }
                         // Finishing saves settings and security; the store update then routes to the kiosk.
                         Route.Setup -> {
@@ -153,9 +164,25 @@ class MainActivity : ComponentActivity() {
         route = Route.Pin
     }
 
+    private val isTv by lazy {
+        getSystemService(UiModeManager::class.java).currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
+    }
+
+    private fun newSettingsViewModel(current: KioskSettings): SettingsViewModel {
+        val repo = SettingsRepository.get(this)
+        return SettingsViewModel(
+            initial = current,
+            security = { security },
+            hasher = PinHasher(),
+            saveSettings = repo::saveSettings,
+            saveSecurity = repo::saveSecurity,
+            scope = lifecycleScope,
+            work = Dispatchers.Default,
+        )
+    }
+
     private fun newSetupViewModel(): SetupViewModel {
         val repo = SettingsRepository.get(this)
-        val isTv = getSystemService(UiModeManager::class.java).currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
         return SetupViewModel(isTv, PinHasher(), repo::saveSettings, repo::saveSecurity, lifecycleScope, Dispatchers.Default)
     }
 

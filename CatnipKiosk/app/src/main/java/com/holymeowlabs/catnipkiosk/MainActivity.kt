@@ -82,6 +82,7 @@ import com.holymeowlabs.catnipkiosk.web.KioskWebView
 import com.holymeowlabs.catnipkiosk.web.WebEvent
 import java.lang.ref.WeakReference
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -101,6 +102,7 @@ class MainActivity : ComponentActivity() {
     private val keySequence = KeySequenceDetector()
     private val cornerTaps by lazy { CornerTapDetector(zoneSizePx = SECRET_CORNER_DP * resources.displayMetrics.density) }
     private var pin by mutableStateOf<PinViewModel?>(null)
+    private var pinCollectors: Job? = null
     internal var route by mutableStateOf<Route?>(null)
         private set
     private var networkAvailable by mutableStateOf(true)
@@ -327,8 +329,11 @@ class MainActivity : ComponentActivity() {
             nowMs = System::currentTimeMillis,
             work = Dispatchers.Default,
         )
-        lifecycleScope.launch { vmPin.unlocked.collect { route = Route.Settings } }
-        lifecycleScope.launch { vmPin.cancelled.collect { route = Route.Kiosk } }
+        pinCollectors?.cancel()
+        pinCollectors = lifecycleScope.launch {
+            launch { vmPin.unlocked.collect { route = Route.Settings } }
+            launch { vmPin.cancelled.collect { route = Route.Kiosk } }
+        }
         pin = vmPin
         return vmPin
     }
@@ -380,7 +385,10 @@ class MainActivity : ComponentActivity() {
     private fun onStored(stored: KioskSettings?, storedSecurity: SecurityState?) {
         kioskSettings = stored
         security = storedSecurity
-        if (pin?.isCurrentFor(storedSecurity, stored?.pinLockoutEnabled == true) == false) pin = null
+        if (pin?.isCurrentFor(storedSecurity, stored?.pinLockoutEnabled == true) == false) {
+            pinCollectors?.cancel()
+            pin = null
+        }
         route = nextRoute(route, stored, storedSecurity)
         if (stored == null || route == Route.Setup) {
             // Setup saves settings before the PIN; nothing is applied until the kiosk is configured.

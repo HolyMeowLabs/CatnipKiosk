@@ -32,8 +32,16 @@ class KioskScreenTest {
             webView = KioskWebView(InstrumentationRegistry.getInstrumentation().targetContext)
             webView.settingsProvider = { KioskSettings(startUrl = "https://example.com/secret-lobby") }
             // The page URL is reachable from the screen through the view; it must never be rendered.
-            webView.loadDataWithBaseURL("https://example.com/secret-lobby", "<p>page</p>", "text/html", null, null)
+            webView.loadUrl("https://example.com/secret-lobby")
         }
+        // Wait until the view reports the URL, so a screen that rendered it would show it.
+        val deadline = System.currentTimeMillis() + 10_000
+        var url: String? = null
+        while (url == null && System.currentTimeMillis() < deadline) {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync { url = webView.url }
+            Thread.sleep(50)
+        }
+        check(url?.contains("secret-lobby") == true) { "page URL never set: $url" }
     }
 
     @After

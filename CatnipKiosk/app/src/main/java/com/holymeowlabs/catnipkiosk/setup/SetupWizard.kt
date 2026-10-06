@@ -21,6 +21,10 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -66,6 +70,9 @@ private fun StepHeader(number: Int, title: Int) {
 @Composable
 private fun StartUrlStep(vm: SetupViewModel, state: SetupUi) {
     StepHeader(1, R.string.setup_step_start_page)
+    // TV remotes have nothing focused otherwise; the address is the first thing to fill in.
+    val urlFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { urlFocus.requestFocus() }
     SchemeChoice(state.scheme, vm::setScheme)
     OutlinedTextField(
         value = state.url,
@@ -74,7 +81,7 @@ private fun StartUrlStep(vm: SetupViewModel, state: SetupUi) {
         singleLine = true,
         isError = state.urlError,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
-        modifier = Modifier.dpadExitsTextField().fillMaxWidth().testTag("setup_url"),
+        modifier = Modifier.dpadExitsTextField().fillMaxWidth().focusRequester(urlFocus).testTag("setup_url"),
     )
     when {
         state.allowedDomain != null -> Text(stringResource(R.string.setup_allowed_domain, state.allowedDomain))

@@ -63,7 +63,13 @@ internal class KioskWebViewClient(private val owner: KioskWebView) : WebViewClie
 
     override fun onPageFinished(view: WebView, url: String?) {
         owner.initialLoad = false
-        if (!owner.currentLoadFailed) owner.onEvent(WebEvent.PageLoaded)
+        if (owner.currentLoadFailed) return
+        // Spec: Back is a no-op on the start page, including after a scheduled reload or retry.
+        if (owner.clearHistoryWhenLoaded) {
+            owner.clearHistoryWhenLoaded = false
+            view.clearHistory()
+        }
+        owner.onEvent(WebEvent.PageLoaded)
     }
 
     override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {

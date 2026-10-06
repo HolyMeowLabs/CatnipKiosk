@@ -27,6 +27,19 @@ class SetupDpadTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
+    fun theUrlFieldHasFocusWhenTheWizardOpens() {
+        val vm = SetupViewModel(false, PinHasher(iterations = 1_000), {}, {}, MainScope(), Dispatchers.Default)
+        compose.setContent {
+            KioskTheme {
+                val state by vm.state.collectAsState()
+                SetupWizard(vm, state)
+            }
+        }
+        compose.waitForIdle()
+        compose.onNodeWithTag("setup_url").assertIsFocused()
+    }
+
+    @Test
     fun dpadDownLeavesTheUrlFieldForNext() {
         val vm = SetupViewModel(false, PinHasher(iterations = 1_000), {}, {}, MainScope(), Dispatchers.Default)
         compose.setContent {

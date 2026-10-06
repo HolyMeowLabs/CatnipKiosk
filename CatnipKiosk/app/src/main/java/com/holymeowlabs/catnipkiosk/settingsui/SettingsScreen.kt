@@ -122,7 +122,8 @@ fun SettingsScreen(
             }
         } else {
             Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = 16.dp).widthIn(max = 720.dp),
+                // widthIn before fillMaxWidth, or the max width has no effect.
+                Modifier.widthIn(max = 720.dp).fillMaxWidth().fillMaxHeight().verticalScroll(rememberScrollState()).padding(top = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 SettingsSection.entries.forEach { section ->

@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.holymeowlabs.catnipkiosk.settings.KioskSettings
 import com.holymeowlabs.catnipkiosk.web.KioskWebView
 import kotlinx.coroutines.flow.MutableSharedFlow
 import org.junit.After
@@ -29,6 +30,7 @@ class KioskScreenTest {
     fun setUp() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             webView = KioskWebView(InstrumentationRegistry.getInstrumentation().targetContext)
+            webView.settingsProvider = { KioskSettings(startUrl = "https://example.com/secret-lobby") }
             // The page URL is reachable from the screen through the view; it must never be rendered.
             webView.loadDataWithBaseURL("https://example.com/secret-lobby", "<p>page</p>", "text/html", null, null)
         }

@@ -77,6 +77,7 @@ import com.holymeowlabs.catnipkiosk.settings.SettingsRepository
 import com.holymeowlabs.catnipkiosk.ui.theme.KioskTheme
 import com.holymeowlabs.catnipkiosk.web.KioskWebView
 import com.holymeowlabs.catnipkiosk.web.WebEvent
+import java.lang.ref.WeakReference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
@@ -90,6 +91,9 @@ class MainActivity : ComponentActivity() {
     private val vm by lazy { KioskViewModel(System::currentTimeMillis, lifecycleScope) }
     private lateinit var connectivity: Connectivity
     private var kioskSettings: KioskSettings? = null
+
+    /** The settings last applied to the kiosk (reload, zoom, schedule); null until it is configured. */
+    private var appliedSettings: KioskSettings? = null
     private var security: SecurityState? = null
     private val keySequence = KeySequenceDetector()
     private val cornerTaps by lazy { CornerTapDetector(zoneSizePx = SECRET_CORNER_DP * resources.displayMetrics.density) }
@@ -110,6 +114,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Becoming the Home app makes Android start a new instance in a Home task; only one kiosk may run.
+        current?.get()?.takeIf { it !== this && !it.isFinishing }?.finishAndRemoveTask()
+        current = WeakReference(this)
         hideSystemBars()
         webView = newWebView()
         onBackPressedDispatcher.addCallback(this) { if (webView.canGoBack()) webView.goBack() }
@@ -354,12 +361,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onStored(stored: KioskSettings?, storedSecurity: SecurityState?) {
-        val previous = kioskSettings
         kioskSettings = stored
         security = storedSecurity
         if (pin?.isCurrentFor(storedSecurity, stored?.pinLockoutEnabled == true) == false) pin = null
         route = nextRoute(route, stored, storedSecurity)
-        if (stored == null || route == Route.Setup) return
+        if (stored == null || route == Route.Setup) {
+            // Setup saves settings before the PIN; nothing is applied until the kiosk is configured.
+            appliedSettings = null
+            return
+        }
+        val previous = appliedSettings
+        appliedSettings = stored
 
         cursorEnabled = stored.cursorEnabled
         if (stored.cursorEnabled && cursorPosition == null && webView.width > 0) cursorController()
@@ -399,6 +411,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private companion object {
+        var current: WeakReference<MainActivity>? = null
 
         /** Side of the top-left square for the tablet's 5-tap secret entry. */
         const val SECRET_CORNER_DP = 80f

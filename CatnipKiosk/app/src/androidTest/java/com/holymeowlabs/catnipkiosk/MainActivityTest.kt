@@ -91,6 +91,27 @@ class MainActivityTest {
         return result as T
     }
 
+    /** Becoming the Home app makes Android start a second instance in a Home task; the old one must go. */
+    @Test
+    fun becomingHomeLeavesASingleKioskInstance() = runBlocking {
+        routes["/start"] = { html("start") }
+        configure()
+        launch()
+        awaitRequests("/start", 1)
+        shell("cmd role add-role-holder android.app.role.HOME ${context.packageName}")
+        try {
+            UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressHome()
+            waitFor("original instance destroyed") { scenario!!.state == Lifecycle.State.DESTROYED }
+        } finally {
+            shell("cmd role remove-role-holder android.app.role.HOME ${context.packageName}")
+        }
+    }
+
+    private fun shell(command: String) {
+        val fd = InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command)
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(fd).use { it.readBytes() }
+    }
+
     @Test
     fun configuredLaunchLoadsTheStartPage() = runBlocking {
         routes["/start"] = { html("start") }

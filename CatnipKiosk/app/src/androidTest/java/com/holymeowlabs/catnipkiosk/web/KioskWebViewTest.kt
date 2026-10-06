@@ -114,6 +114,7 @@ class KioskWebViewTest {
         host.load("$local/start")
         assertThat(host.awaitEvent<WebEvent.StartPageBlocked>().blockedHost).isEqualTo("127.0.0.1")
         assertThat(requested).doesNotContain("/sso")
+        assertNoPageLoadedAfterSetupProblem()
     }
 
     @Test
@@ -122,6 +123,7 @@ class KioskWebViewTest {
         host.load("$local/start")
         assertThat(host.awaitEvent<WebEvent.StartPageBlocked>().blockedHost).isEqualTo("127.0.0.1")
         assertThat(requested).doesNotContain("/sso")
+        assertNoPageLoadedAfterSetupProblem()
     }
 
     @Test
@@ -149,6 +151,7 @@ class KioskWebViewTest {
         assertThat(host.awaitEvent<WebEvent.StartPageBlocked>().blockedHost).isEqualTo("127.0.0.1")
         delay(2_000)
         assertThat(requested.count { it == "/start" }).isEqualTo(1)
+        assertNoPageLoadedAfterSetupProblem()
     }
 
     @Test
@@ -354,6 +357,13 @@ class KioskWebViewTest {
             view.destroy()
         }
         assertThat(shown).isFalse()
+    }
+
+    /** The owner keeps the setup-problem screen up; a stray PageLoaded would replace it. */
+    private suspend fun assertNoPageLoadedAfterSetupProblem() {
+        delay(1_500)
+        val afterProblem = host.log.dropWhile { it !is WebEvent.StartPageBlocked }
+        assertThat(afterProblem.filterIsInstance<WebEvent.PageLoaded>()).isEmpty()
     }
 
     private fun fullScreenButton(onClick: String) =

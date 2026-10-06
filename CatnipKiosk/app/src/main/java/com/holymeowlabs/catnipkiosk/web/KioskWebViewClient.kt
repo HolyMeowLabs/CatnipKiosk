@@ -36,6 +36,7 @@ internal class KioskWebViewClient(private val owner: KioskWebView) : WebViewClie
 
     /** Names only the host: the URL may carry tokens. */
     private fun reportStartPageBlocked(url: Uri) {
+        owner.startPageBlocked = true
         owner.onEvent(WebEvent.StartPageBlocked(NavigationPolicy.normalizeHost(url.host).orEmpty()))
     }
 
@@ -56,7 +57,7 @@ internal class KioskWebViewClient(private val owner: KioskWebView) : WebViewClie
 
     override fun onPageFinished(view: WebView, url: String?) {
         owner.initialLoad = false
-        owner.onEvent(WebEvent.PageLoaded)
+        if (!owner.startPageBlocked) owner.onEvent(WebEvent.PageLoaded)
     }
 
     override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {

@@ -15,6 +15,9 @@ class KioskWebView(context: Context) : WebView(context) {
     /** True from [loadStart] until the first page finishes; a blocked navigation then means a setup problem. */
     internal var initialLoad = false
 
+    /** Set once StartPageBlocked is reported; the cancelled load must not then report PageLoaded. */
+    internal var startPageBlocked = false
+
     /** The main-frame URL most recently requested, to tell its SSL errors from subresources'. */
     internal var mainFrameUrl: String? = null
 
@@ -34,6 +37,7 @@ class KioskWebView(context: Context) : WebView(context) {
     fun loadStart() {
         val url = settingsProvider().startUrl
         initialLoad = true
+        startPageBlocked = false
         mainFrameUrl = url
         loadUrl(url)
     }

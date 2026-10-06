@@ -1,6 +1,8 @@
 package com.holymeowlabs.catnipkiosk
 
 import android.annotation.SuppressLint
+import android.app.UiModeManager
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -21,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +41,8 @@ import com.holymeowlabs.catnipkiosk.pin.PinScreen
 import com.holymeowlabs.catnipkiosk.pin.PinViewModel
 import com.holymeowlabs.catnipkiosk.security.PinGate
 import com.holymeowlabs.catnipkiosk.security.PinHasher
+import com.holymeowlabs.catnipkiosk.setup.SetupViewModel
+import com.holymeowlabs.catnipkiosk.setup.SetupWizard
 import com.holymeowlabs.catnipkiosk.kiosk.Connectivity
 import com.holymeowlabs.catnipkiosk.kiosk.KioskScreen
 import com.holymeowlabs.catnipkiosk.kiosk.KioskViewModel
@@ -108,7 +113,12 @@ class MainActivity : ComponentActivity() {
                             BackHandler { route = Route.Kiosk }
                             Text(stringResource(R.string.settings_pending), Modifier.align(Alignment.Center))
                         }
-                        Route.Setup -> Text(stringResource(R.string.setup_pending), Modifier.align(Alignment.Center))
+                        // Finishing saves settings and security; the store update then routes to the kiosk.
+                        Route.Setup -> {
+                            val setupVm = remember { newSetupViewModel() }
+                            val state by setupVm.state.collectAsState()
+                            SetupWizard(setupVm, state)
+                        }
                         else -> Unit
                     }
                 }
@@ -141,6 +151,12 @@ class MainActivity : ComponentActivity() {
         val vmPin = pin ?: createPinViewModel() ?: return
         vmPin.reset()
         route = Route.Pin
+    }
+
+    private fun newSetupViewModel(): SetupViewModel {
+        val repo = SettingsRepository.get(this)
+        val isTv = getSystemService(UiModeManager::class.java).currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
+        return SetupViewModel(isTv, PinHasher(), repo::saveSettings, repo::saveSecurity, lifecycleScope, Dispatchers.Default)
     }
 
     /** Created once from the first stored state; it then owns the in-memory security state. */
@@ -185,6 +201,7 @@ class MainActivity : ComponentActivity() {
         val previous = kioskSettings
         kioskSettings = stored
         security = storedSecurity
+        if (pin?.isCurrentFor(storedSecurity, stored?.pinLockoutEnabled == true) == false) pin = null
         route = nextRoute(route, stored, storedSecurity)
         if (stored == null || route == Route.Setup) return
 
@@ -201,7 +218,6 @@ class MainActivity : ComponentActivity() {
     private fun KioskSettings.navigationFields() = listOf(startUrl, navMode, includeSubdomains, extraDomains)
 
     private fun newWebView() = KioskWebView(this).apply {
-        if (pin?.isCurrentFor(storedSecurity, stored?.pinLockoutEnabled == true) == false) pin = null
         settingsProvider = { checkNotNull(kioskSettings) }
         onEvent = { event ->
             if (event == WebEvent.RendererGone) replaceWebView()

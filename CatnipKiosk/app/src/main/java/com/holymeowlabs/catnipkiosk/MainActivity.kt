@@ -23,11 +23,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -37,7 +39,12 @@ import com.holymeowlabs.catnipkiosk.app.Route
 import com.holymeowlabs.catnipkiosk.app.adminSessionExpired
 import com.holymeowlabs.catnipkiosk.app.nextRoute
 import com.holymeowlabs.catnipkiosk.app.routeAfterStop
+import com.holymeowlabs.catnipkiosk.cursor.CursorController
+import com.holymeowlabs.catnipkiosk.cursor.CursorKeys
+import com.holymeowlabs.catnipkiosk.cursor.CursorOverlay
+import com.holymeowlabs.catnipkiosk.cursor.SyntheticTap
 import com.holymeowlabs.catnipkiosk.input.CornerTapDetector
+import com.holymeowlabs.catnipkiosk.kiosk.KioskUi
 import com.holymeowlabs.catnipkiosk.input.KeyMapping
 import com.holymeowlabs.catnipkiosk.input.KeySequenceDetector
 import com.holymeowlabs.catnipkiosk.pin.PinScreen
@@ -79,6 +86,10 @@ class MainActivity : ComponentActivity() {
     private var networkAvailable by mutableStateOf(true)
     private var webViewGeneration by mutableIntStateOf(0)
     private var lastInputMs = 0L
+    private var cursorEnabled by mutableStateOf(false)
+    private var cursor: CursorController? = null
+    private var cursorPosition by mutableStateOf<Offset?>(null)
+    private var cursorMovedMs by mutableLongStateOf(0L)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -115,6 +126,10 @@ class MainActivity : ComponentActivity() {
                                 coveredByAdmin = current != Route.Kiosk,
                             )
                         }
+                    }
+                    val position = cursorPosition
+                    if (current == Route.Kiosk && cursorEnabled && ui == KioskUi.Showing && position != null) {
+                        CursorOverlay(position, cursorMovedMs)
                     }
                     when (current) {
                         Route.Pin -> pin?.let { p ->
@@ -153,12 +168,48 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         lastInputMs = event.eventTime
+        // The secret sequence is fed first, even when the arrows then drive the cursor.
         if (event.action == KeyEvent.ACTION_DOWN && route == Route.Kiosk &&
             keySequence.onKey(KeyMapping.toDir(event.keyCode), event.eventTime)
         ) {
             openPin()
         }
-        return super.dispatchKeyEvent(event)
+        val cursorActive = route == Route.Kiosk && cursorEnabled && vm.ui.value == KioskUi.Showing &&
+            webView.width > 0 && webView.height > 0
+        return when (val action = CursorKeys.decide(event.keyCode, event.action, cursorActive)) {
+            CursorKeys.Action.PassThrough -> super.dispatchKeyEvent(event)
+            CursorKeys.Action.Consume -> true
+            CursorKeys.Action.Tap -> {
+                val c = cursorController()
+                SyntheticTap.dispatch(webView, c.x, c.y)
+                true
+            }
+            is CursorKeys.Action.Move -> {
+                val step = cursorController().move(action.dir, event.eventTime - event.downTime)
+                cursorPosition = Offset(step.x, step.y)
+                cursorMovedMs = event.eventTime
+                if (step.scrollDx != 0 || step.scrollDy != 0) scrollPage(step.scrollDx, step.scrollDy)
+                true
+            }
+        }
+    }
+
+    /** Recreated when the view's size changes (rotation, renderer recreation). */
+    private fun cursorController(): CursorController {
+        val w = webView.width.toFloat()
+        val h = webView.height.toFloat()
+        val existing = cursor
+        if (existing != null && existing.widthPx == w && existing.heightPx == h) return existing
+        return CursorController(w, h).also {
+            cursor = it
+            cursorPosition = Offset(it.x, it.y)
+        }
+    }
+
+    /** JS scroll in CSS pixels; WebView's own scroll offset follows the document's. */
+    private fun scrollPage(dxPx: Int, dyPx: Int) {
+        val density = resources.displayMetrics.density
+        webView.evaluateJavascript("window.scrollBy(${dxPx / density}, ${dyPx / density})", null)
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
@@ -247,6 +298,8 @@ class MainActivity : ComponentActivity() {
         route = nextRoute(route, stored, storedSecurity)
         if (stored == null || route == Route.Setup) return
 
+        cursorEnabled = stored.cursorEnabled
+        if (stored.cursorEnabled && cursorPosition == null && webView.width > 0) cursorController()
         if (stored.keepScreenOn) {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         } else {

@@ -31,6 +31,7 @@
     <string name="setup_next">Next</string>
     <string name="setup_back">Back</string>
     <string name="setup_finish">Finish</string>
+    <string name="cursor_hint">Cursor on · OK to click · push to an edge to scroll</string>
     <string name="settings_title">Settings</string>
     <string name="settings_back_to_kiosk">Back to kiosk</string>
     <string name="settings_exit_app">Exit app</string>

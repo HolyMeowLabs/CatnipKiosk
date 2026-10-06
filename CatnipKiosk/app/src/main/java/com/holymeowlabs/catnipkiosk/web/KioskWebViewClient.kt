@@ -23,6 +23,7 @@ internal class KioskWebViewClient(private val owner: KioskWebView) : WebViewClie
         val url = request.url.toString()
         if (!blocked(url)) {
             owner.mainFrameUrl = url
+            owner.currentLoadFailed = false
             return false
         }
         // A redirect or script bounce while the start page loads is a setup problem; a user tap is not.
@@ -34,9 +35,14 @@ internal class KioskWebViewClient(private val owner: KioskWebView) : WebViewClie
         return true
     }
 
+    private fun reportFailure(description: String) {
+        owner.currentLoadFailed = true
+        owner.onEvent(WebEvent.MainFrameFailed(description))
+    }
+
     /** Names only the host: the URL may carry tokens. */
     private fun reportStartPageBlocked(url: Uri) {
-        owner.startPageBlocked = true
+        owner.currentLoadFailed = true
         owner.onEvent(WebEvent.StartPageBlocked(NavigationPolicy.normalizeHost(url.host).orEmpty()))
     }
 
@@ -57,23 +63,21 @@ internal class KioskWebViewClient(private val owner: KioskWebView) : WebViewClie
 
     override fun onPageFinished(view: WebView, url: String?) {
         owner.initialLoad = false
-        if (!owner.startPageBlocked) owner.onEvent(WebEvent.PageLoaded)
+        if (!owner.currentLoadFailed) owner.onEvent(WebEvent.PageLoaded)
     }
 
     override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-        if (request.isForMainFrame) owner.onEvent(WebEvent.MainFrameFailed(error.description.toString()))
+        if (request.isForMainFrame) reportFailure(error.description.toString())
     }
 
     override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
-        if (request.isForMainFrame && response.statusCode >= 500) {
-            owner.onEvent(WebEvent.MainFrameFailed("HTTP ${response.statusCode}"))
-        }
+        if (request.isForMainFrame && response.statusCode >= 500) reportFailure("HTTP ${response.statusCode}")
     }
 
     /** Never proceeds. Also fires for subresources, which fail silently like any broken image. */
     override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
         handler.cancel()
-        if (sameOrigin(error.url, owner.mainFrameUrl)) owner.onEvent(WebEvent.MainFrameFailed("ssl"))
+        if (sameOrigin(error.url, owner.mainFrameUrl)) reportFailure("ssl")
     }
 
     private fun sameOrigin(a: String?, b: String?): Boolean {

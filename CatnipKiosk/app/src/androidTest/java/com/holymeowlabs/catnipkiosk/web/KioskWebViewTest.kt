@@ -218,6 +218,7 @@ class KioskWebViewTest {
         routes["/start"] = html("down", code = 503)
         host.load("$local/start")
         host.awaitEvent<WebEvent.MainFrameFailed>()
+        assertNoPageLoadedAfterFailure()
     }
 
     @Test
@@ -226,6 +227,7 @@ class KioskWebViewTest {
         server.shutdown()
         host.load("http://localhost:$port/start")
         host.awaitEvent<WebEvent.MainFrameFailed>()
+        assertNoPageLoadedAfterFailure()
     }
 
     @Test
@@ -357,6 +359,13 @@ class KioskWebViewTest {
             view.destroy()
         }
         assertThat(shown).isFalse()
+    }
+
+    /** A failed load's error page still "finishes"; reporting PageLoaded would cancel the retry. */
+    private suspend fun assertNoPageLoadedAfterFailure() {
+        delay(1_500)
+        val afterFailure = host.log.dropWhile { it !is WebEvent.MainFrameFailed }
+        assertThat(afterFailure.filterIsInstance<WebEvent.PageLoaded>()).isEmpty()
     }
 
     /** The owner keeps the setup-problem screen up; a stray PageLoaded would replace it. */

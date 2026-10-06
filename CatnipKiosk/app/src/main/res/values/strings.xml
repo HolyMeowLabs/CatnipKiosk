@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">CatnipKiosk</string>
+    <string name="blocked_message">That page isn\'t available on this screen.</string>
+    <string name="reconnect_title">Reconnecting…</string>
+    <string name="reconnect_body">The page didn\'t load. This screen will keep trying on its own.</string>
+    <string name="reconnect_countdown">Retrying in %1$d s · attempt %2$d</string>
+    <string name="reconnect_status">Network: %1$s · Page: not loaded</string>
+    <string name="network_connected">connected</string>
+    <string name="network_offline">offline</string>
+    <string name="setup_problem_title">This screen needs attention</string>
+    <string name="setup_problem_body">This page sends viewers to %1$s, which isn\'t allowed. Add it under Settings › Navigation.</string>
+    <string name="setup_pending">Setup isn\'t available yet.</string>
 </resources>
